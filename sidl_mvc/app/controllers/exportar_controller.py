@@ -7,6 +7,8 @@ import uuid
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
+import csv
+import io
 
 from app.schemas.schemas import LanzarAuditoriaRequest
 from app.services.pdf_service import generar_pdf
@@ -43,24 +45,27 @@ async def exportar_pdf(audit_id: str):
 
 @router.post("/csv")
 async def exportar_csv(req: LanzarAuditoriaRequest):
-    """
-    Genera y descarga el CSV de casos de prueba para Excel / TestRail.
-    """
     casos = [c.dict() for c in req.casos]
-    lineas = [
-        "ID,Prioridad,Nombre del Caso,Precondiciones,Pasos,Resultado Esperado,Ref. SRS"
-    ]
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+    
+    writer.writerow(["ID", "Prioridad", "Nombre del Caso", "Precondiciones", "Pasos", "Resultado Esperado", "Ref. SRS"])
     for c in casos:
-        pasos = c.get("pasos", "").replace("\n", "; ").replace('"', '""')
-        lineas.append(
-            f"{c['id']},{c['prioridad']},"
-            f"\"{c['nombre']}\",\"{c['pre']}\",\"{pasos}\","
-            f"\"{c['esperado']}\",{c['ref']}"
-        )
-    contenido = "\n".join(lineas)
-
+        writer.writerow([
+            c.get('id', ''),
+            c.get('prioridad', ''),
+            c.get('nombre', ''),
+            c.get('pre', ''),
+            c.get('pasos', '').replace('\n', '; '),
+            c.get('esperado', ''),
+            c.get('ref', '')
+        ])
+    
+    # Resetear el cursor y codificar
+    output.seek(0)
+    contenido = output.getvalue().encode("utf-8-sig")
     return StreamingResponse(
-        iter([contenido.encode("utf-8-sig")]),
+        iter([contenido]),
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=sidl-casos-de-prueba.csv"},
+        headers={"Content-Disposition": "attachment; filename=sidl-casos-de-prueba.csv"}
     )

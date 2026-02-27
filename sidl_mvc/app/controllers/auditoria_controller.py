@@ -50,20 +50,22 @@ async def subir_archivos(
 
     # ── Extraer texto del SRS ──────────────────────────────────────────────────
     texto_srs = srs_service.extraer_texto(ruta_srs)
-    preview   = texto_srs[:500] + "..." if len(texto_srs) > 500 else texto_srs
-
-    # ── Generar casos de prueba con Gemini ────────────────────────────────────
+    preview   = texto_srs  # <-- Ahora enviamos todo el documento
+    # ── Generar casos de prueba con Gemini (ahora Groq) ───────────────────────
     resultado = gemini_service.generar_casos_desde_srs(texto_srs)
     casos     = resultado["casos"]
     fuente    = resultado["fuente"]
+    
+    # EXTRAER LOS REQUISITOS LIMPIOS QUE DEVOLVIÓ LA IA
+    req_extraidos = resultado.get("requisitos_extraidos", texto_srs[:500])
 
-    # ── Guardar sesión en SQLite ───────────────────────────────────────────────
+    # ── Guardar sesión en SQLite usando los requisitos limpios ─────────────────
     session_id = auditoria_model.crear_sesion_archivo(
         archivo_srs=srs.filename,
         ruta_srs=str(ruta_srs),
         archivo_ui=nombre_ui,
         ruta_ui=str(ruta_ui) if ruta_ui else "",
-        texto_srs=texto_srs,
+        texto_srs=req_extraidos,  # <--- GUARDAR AQUÍ
     )
 
     return {
@@ -72,9 +74,8 @@ async def subir_archivos(
         "archivo_ui":        nombre_ui,
         "casos":             casos,
         "fuente":            fuente,
-        "texto_srs_preview": preview,
+        "texto_srs_preview": req_extraidos,  # <--- MANDAR AL FRONTEND AQUÍ
     }
-
 
 @router.post("/lanzar", response_model=AuditoriaResponse)
 async def lanzar_auditoria(req: LanzarAuditoriaRequest):

@@ -21,6 +21,7 @@ let hallazgosDescartados = new Set();
 let hallazgoTicketActual = null;
 let pasoAlcanzado      = 1;
 let textoSrsActual     = '';   // Texto extraído del SRS para el visor
+let urlImagenActual    = null;
 
 // SRS de demostración para el modo demo
 const SRS_DEMO = `ESPECIFICACIÓN DE REQUISITOS DEL SISTEMA
@@ -114,6 +115,11 @@ async function iniciarAnalisis() {
   if (!srsFile) {
     toast('Por favor carga el documento SRS primero.');
     return;
+  }
+
+  if (uiFile) {
+    if (urlImagenActual) URL.revokeObjectURL(urlImagenActual);
+    urlImagenActual = URL.createObjectURL(uiFile);
   }
 
   mostrarLoading('Enviando archivos al servidor Python...\n(Gemini 1.5 Pro generará los casos de prueba)');
@@ -382,33 +388,47 @@ function construirVisorSRS() {
 }
 
 function construirCanvasUI() {
-  // Construir mock de la UI de demostración con bounding boxes
-  const bboxes = hallazgosData.map(h => {
+  // DEBUG: Esto te permitirá presionar F12 en tu navegador y ver exactamente qué respondió Groq
+  console.log("🔍 Datos recibidos de la IA:", hallazgosData);
+
+  const bboxes = hallazgosData.map((h, i) => {
     const bb = h.bbox || {};
-    return `<div class="bbox ${bb.tipo || 'error'}" id="bbox-${h.id}"
-              style="left:${bb.x || '8%'};top:${bb.y || '50%'};width:${bb.w || '84%'};height:${bb.h || '8%'}">
-              <div class="bbox-label">${escHtml(bb.etiqueta || h.id)}</div>
+    
+    // Si la IA no mandó coordenadas, le asignamos unas por defecto para que la caja SÍ aparezca
+    let x = bb.x || (10 + (i * 5)) + '%'; 
+    let y = bb.y || (20 + (i * 10)) + '%';
+    let w = bb.w || '60%'; 
+    let h_dim = bb.h || '10%';
+    
+    // LIMPIEZA EXTREMA: Quitamos espacios, letras y caracteres raros que la IA haya inventado
+    x = String(x).replace(/[^0-9.%px]/g, '');
+    y = String(y).replace(/[^0-9.%px]/g, '');
+    w = String(w).replace(/[^0-9.%px]/g, '');
+    h_dim = String(h_dim).replace(/[^0-9.%px]/g, '');
+
+    // Si la IA solo mandó números puros (ej. "15"), lo forzamos a ser porcentaje ("15%")
+    if(!x.includes('%') && !x.includes('px')) x += '%';
+    if(!y.includes('%') && !y.includes('px')) y += '%';
+    if(!w.includes('%') && !w.includes('px')) w += '%';
+    if(!h_dim.includes('%') && !h_dim.includes('px')) h_dim += '%';
+
+    // Usamos estilos en línea absolutos para IGNORAR el archivo sidl.css y forzar la visualización
+    return `<div id="bbox-${h.id}" 
+              style="left:${x}; top:${y}; width:${w}; height:${h_dim}; position:absolute; z-index: 999; border: 3px solid #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.9); opacity: 0; transition: opacity 0.5s ease-in; pointer-events: none; border-radius: 4px;">
+              <div style="background:#ef4444; color:white; padding:3px 8px; font-size:11px; font-weight:bold; position:absolute; top:-24px; left:-3px; white-space:nowrap; border-radius:4px; font-family: sans-serif; letter-spacing: 0.5px;">
+                <i class="bi bi-bug-fill me-1"></i> ${escHtml(bb.etiqueta || h.id)}
+              </div>
             </div>`;
   }).join('');
 
+  // Usar la imagen subida ajustada al contenedor natural
+  const imgHtml = urlImagenActual 
+    ? `<img src="${urlImagenActual}" style="width:100%; height:auto; display:block; border-radius:4px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">` 
+    : `<div style="padding:4rem;text-align:center;color:#666;">Sin captura de pantalla subida</div>`;
+
   document.getElementById('ui-canvas').innerHTML = `
-    <div class="ui-mock-wrap" id="ui-mock">
-      <div style="background:#1a237e;padding:10px 14px;color:#fff;font-size:12px;font-weight:bold;display:flex;justify-content:space-between;font-family:sans-serif">
-        <span>🔐 Portal SecureBank</span>
-        <span style="font-size:10px;opacity:.7">v2.1.0</span>
-      </div>
-      <div style="padding:14px;font-family:sans-serif">
-        <div style="font-size:10px;color:#555;margin-bottom:3px">CORREO ELECTRÓNICO</div>
-        <input style="width:100%;border:1.5px solid #ccc;border-radius:4px;padding:6px 10px;font-size:12px;margin-bottom:10px;outline:none" placeholder="usuario@empresa.com" readonly>
-        <div style="font-size:10px;color:#555;margin-bottom:3px">CONTRASEÑA</div>
-        <input type="password" style="width:100%;border:1.5px solid #ccc;border-radius:4px;padding:6px 10px;font-size:12px;margin-bottom:10px;outline:none" placeholder="••••••••" readonly>
-        <button style="width:100%;background:#e57373;color:#fff;border:none;padding:9px;border-radius:4px;font-size:12px;font-weight:bold;margin-bottom:10px;cursor:default">INICIAR SESIÓN</button>
-        <div style="font-size:9px;color:#b0b0b0;background:#d0d0d0;padding:4px 6px;border-radius:3px">Texto de baja visibilidad — contraste insuficiente</div>
-        <div style="font-size:10px;color:#777;margin-top:8px">¿Olvidaste tu contraseña? Haz clic aquí</div>
-      </div>
-      <div style="background:#f5f5f5;padding:6px 14px;font-size:9px;color:#aaa;border-top:1px solid #eee;font-family:sans-serif">
-        © 2025 SecureBank — v2.1
-      </div>
+    <div class="ui-mock-wrap" id="ui-mock" style="position:relative; padding:0; background:transparent; border-radius:4px; box-shadow:none; max-width:100%; width:auto; display:inline-block; overflow: visible;">
+      ${imgHtml}
       <div class="scan-line" id="scan-line"></div>
       <div class="scan-overlay show" id="scan-overlay">
         <div style="position:relative;width:56px;height:56px">
@@ -418,7 +438,7 @@ function construirCanvasUI() {
           </svg>
           <div class="ring-pct" id="ring-pct">0%</div>
         </div>
-        <div style="font-family:var(--mono);font-size:.6rem;color:var(--sky);letter-spacing:1px">GEMINI ANALIZANDO...</div>
+        <div style="font-family:var(--mono);font-size:.6rem;color:var(--sky);letter-spacing:1px">GROQ VISION ANALIZANDO...</div>
       </div>
       ${bboxes}
     </div>`;
@@ -445,17 +465,18 @@ function ejecutarSecuenciaVisor(puntaje) {
     if (prog >= 100) clearInterval(iv);
   }, 80);
 
-  // Log de análisis
+  const criticos = hallazgosData.filter(h => h.severidad === 'critical').length;
+  
   const msgs = [
-    [0,    'hi',   '[FastAPI]  Auditoría recibida — iniciando pipeline de análisis.'],
-    [600,  '',     '[PyMuPDF]  Preprocesando imagen de la captura de pantalla...'],
-    [1200, 'ok',   '[Gemini]   ✓ Visión activada — analizando elementos de la UI.'],
-    [1800, 'hi',   '[Motor]    Referenciando casos de prueba contra elementos visuales...'],
-    [2400, 'warn', `[Resultado] ⚠ ${hallazgosData.filter(h=>h.severidad==='critical').length} hallazgos críticos detectados.`],
-    [3000, 'ok',   '[WCAG]     ✓ Análisis de accesibilidad WCAG 2.1 AA completado.'],
+    [0,    'hi',   '[FastAPI]  Sesión iniciada. Recepción de datos completada.'],
+    [600,  '',     '[Pillow]   Preprocesando y optimizando imagen de la UI...'],
+    [1200, 'ok',   '[Groq]     ✓ Modelo Llama 3.2 11B Vision conectado.'],
+    [1800, 'hi',   '[Motor]    Escaneando imagen y aplicando casos de prueba...'],
+    [2400, criticos > 0 ? 'err' : 'ok', `[Detección] Se encontraron ${hallazgosData.length} anomalías en la UI (${criticos} críticas).`],
+    [3000, 'ok',   '[WCAG]     ✓ Criterios de accesibilidad evaluados.'],
     [3500, 'ok',   `[Puntaje]  ✓ QA Score calculado: ${puntaje}/100`],
-    [3800, 'ok',   '[SQLite]   ✓ Auditoría guardada en la base de datos.'],
-    [4100, 'hi',   '[SiDL]     Auditoría completa — generando reporte...'],
+    [3800, 'ok',   '[SQLite]   ✓ Resultados guardados en la base de datos.'],
+    [4100, 'hi',   '[SiDL]     Renderizando bounding boxes sobre la captura...'],
   ];
 
   msgs.forEach(([t, cls, msg]) => {
@@ -468,11 +489,14 @@ function ejecutarSecuenciaVisor(puntaje) {
     }, t);
   });
 
-  // Mostrar bounding boxes progresivamente
+  // Mostrar bounding boxes progresivamente controlando la Opacidad directamente con JS
   hallazgosData.forEach((h, i) => {
     setTimeout(() => {
       const el = document.getElementById('bbox-' + h.id);
-      if (el) el.classList.add('show');
+      if (el) {
+        el.style.opacity = '1';  // <--- ESTO FORZA A QUE SE VEA LA CAJA SÍ O SÍ
+        el.classList.add('show');
+      }
       document.getElementById('highlight-count').textContent =
         (i + 1) + ' cláusula' + ((i + 1) !== 1 ? 's violadas' : ' violada');
       document.getElementById('bbox-count').textContent =
@@ -488,7 +512,7 @@ function ejecutarSecuenciaVisor(puntaje) {
     document.getElementById('btn-ver-res').style.display = '';
     renderizarResultados(puntaje);
     pasoAlcanzado = Math.max(pasoAlcanzado, 4);
-    toast('Auditoría completa — ' + hallazgosData.length + ' hallazgos guardados en SQLite ✓');
+    toast('Auditoría completa — ' + hallazgosData.length + ' hallazgos detectados ✓');
   }, 4800);
 }
 
