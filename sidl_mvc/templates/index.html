@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SiDL — Plataforma de Auditoría Visual QA</title>
+
+  <!-- Fuentes -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- SiDL Estilos -->
+  <link rel="stylesheet" href="/static/css/sidl.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     BARRA SUPERIOR
+══════════════════════════════════════════════════════════════ -->
+<header class="topbar">
+  <a class="logo" href="#" onclick="goScreen('s-ingesta')">
+    Si<span class="logo-accent">DL</span>
+    <span class="logo-tag">MVC v2.0</span>
+  </a>
+  <div class="topbar-sep"></div>
+  <div class="topbar-status">
+    <span class="pulse-dot"></span>
+    FASTAPI + SQLITE + GEMINI 1.5 PRO
+  </div>
+  <div id="nb-auth-area" style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;flex-shrink:0">
+    <button class="topbar-btn" onclick="abrirAuth()">
+      <i class="bi bi-person"></i> INICIAR SESIÓN
+    </button>
+  </div>
+  <button class="topbar-btn primary" onclick="goScreen('s-ingesta')">
+    <i class="bi bi-plus-lg"></i> NUEVA AUDITORÍA
+  </button>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════════
+     INDICADOR DE PASOS
+══════════════════════════════════════════════════════════════ -->
+<div class="stepper-bar">
+  <div class="step-item active" id="step-1" onclick="pasoProtegido('s-ingesta',1)">
+    <div class="step-num">1</div> INGESTA
+  </div>
+  <div class="step-connector"></div>
+  <div class="step-item" id="step-2" onclick="pasoProtegido('s-casos',2)">
+    <div class="step-num">2</div> CASOS DE PRUEBA
+  </div>
+  <div class="step-connector"></div>
+  <div class="step-item" id="step-3" onclick="pasoProtegido('s-visor',3)">
+    <div class="step-num">3</div> VISOR DUAL
+  </div>
+  <div class="step-connector"></div>
+  <div class="step-item" id="step-4" onclick="pasoProtegido('s-resultados',4)">
+    <div class="step-num">4</div> RESULTADOS
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANTALLA 1 — INGESTA
+══════════════════════════════════════════════════════════════ -->
+<div id="s-ingesta" class="screen active">
+  <div class="intake-layout">
+    <div class="intake-headline">
+      <h1>PLATAFORMA DE AUDITORÍA<br><em>MULTIMODAL QA</em></h1>
+      <p>// CARGA EL SRS + CAPTURA DE PANTALLA — PYTHON + IA VALIDA EL CUMPLIMIENTO EN TIEMPO REAL</p>
+    </div>
+
+    <div class="drop-grid">
+      <!-- Zona SRS -->
+      <div class="dz" id="dz-srs"
+        onclick="document.getElementById('fi-srs').click()"
+        ondragover="dzOver(event,'dz-srs')"
+        ondragleave="dzLeave('dz-srs')"
+        ondrop="dzDrop(event,'dz-srs','fi-srs')">
+        <input type="file" id="fi-srs" accept=".pdf,.docx,.txt" style="display:none" onchange="dzArchivo(this,'dz-srs')">
+        <i class="bi bi-file-earmark-richtext dz-icon"></i>
+        <div class="dz-default">
+          <div class="dz-slot">MÓDULO 01 — ANALIZADOR DE REQUISITOS</div>
+          <div class="dz-title">Documento de Requisitos (SRS)</div>
+          <div class="dz-sub">PDF · DOCX · TXT — Máx. 50 MB</div>
+          <div class="dz-hint">ARRASTRA Y SUELTA O HAZ CLIC</div>
+        </div>
+        <div class="dz-filename" id="srs-fn">—</div>
+      </div>
+
+      <!-- Zona captura UI -->
+      <div class="dz" id="dz-ui"
+        onclick="document.getElementById('fi-ui').click()"
+        ondragover="dzOver(event,'dz-ui')"
+        ondragleave="dzLeave('dz-ui')"
+        ondrop="dzDrop(event,'dz-ui','fi-ui')">
+        <input type="file" id="fi-ui" accept="image/*" style="display:none" onchange="dzArchivo(this,'dz-ui')">
+        <i class="bi bi-display dz-icon"></i>
+        <div class="dz-default">
+          <div class="dz-slot">MÓDULO 02 — MOTOR DE AUDITORÍA VISUAL</div>
+          <div class="dz-title">Captura de Pantalla de la UI</div>
+          <div class="dz-sub">PNG · JPG · WebP — Máx. 20 MB</div>
+          <div class="dz-hint">ARRASTRA Y SUELTA O HAZ CLIC</div>
+        </div>
+        <div class="dz-filename" id="ui-fn">—</div>
+      </div>
+    </div>
+
+    <!-- Badges tecnológicos -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:1.5rem">
+      <span class="tech-badge"><i class="bi bi-cpu me-1" style="color:var(--sky)"></i>FastAPI + Python MVC</span>
+      <span class="tech-badge"><i class="bi bi-database me-1" style="color:var(--sky)"></i>SQLite</span>
+      <span class="tech-badge"><i class="bi bi-eye me-1" style="color:var(--sky)"></i>Gemini 1.5 Pro Vision</span>
+      <span class="tech-badge"><i class="bi bi-file-pdf me-1" style="color:var(--sky)"></i>ReportLab PDF</span>
+      <span class="tech-badge"><i class="bi bi-file-earmark me-1" style="color:var(--sky)"></i>PyMuPDF</span>
+    </div>
+
+    <div class="cta-row">
+      <button class="btn-launch" id="btn-launch" onclick="iniciarAnalisis()">
+        <i class="bi bi-cpu-fill"></i> ANALIZAR REQUISITOS Y GENERAR CASOS DE PRUEBA
+      </button>
+      <button class="btn-demo" onclick="iniciarDemo()">
+        <i class="bi bi-play-circle me-1"></i> DEMO RÁPIDO — sin necesidad de archivos
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANTALLA 2 — CASOS DE PRUEBA
+══════════════════════════════════════════════════════════════ -->
+<div id="s-casos" class="screen">
+  <div class="tc-layout">
+    <div class="section-header">
+      <div>
+        <div class="section-title">GESTIÓN DE <em>CASOS DE PRUEBA</em></div>
+        <div class="section-sub" id="tc-fuente">// GENERADOS POR GEMINI 1.5 PRO — REVISA Y EDITA ANTES DE AUDITAR</div>
+      </div>
+      <div class="btn-group-sm">
+        <button class="btn-sm" onclick="agregarFila()"><i class="bi bi-plus-lg"></i> AGREGAR FILA</button>
+        <button class="btn-sm" onclick="exportarCSV()"><i class="bi bi-file-earmark-spreadsheet"></i> EXPORTAR CSV</button>
+        <button class="btn-sm solid" onclick="lanzarAuditoria()"><i class="bi bi-play-fill"></i> LANZAR AUDITORÍA</button>
+      </div>
+    </div>
+
+    <div class="tc-table-wrap">
+      <table class="tc-table">
+        <thead>
+          <tr>
+            <th style="width:80px">ID</th>
+            <th style="width:110px">PRIORIDAD</th>
+            <th style="width:22%">NOMBRE DEL CASO</th>
+            <th>PRECONDICIONES</th>
+            <th>PASOS DE PRUEBA</th>
+            <th>RESULTADO ESPERADO</th>
+            <th style="width:65px">REF. SRS</th>
+            <th style="width:70px">ACCIONES</th>
+          </tr>
+        </thead>
+        <tbody id="tc-body"></tbody>
+      </table>
+      <div class="tc-footer">
+        <span class="tc-count" id="tc-count">0 casos</span>
+        <span class="tc-count" style="color:var(--sky)">// Edición Colaborativa Humano-IA — SQLite persiste los resultados</span>
+      </div>
+    </div>
+
+    <!-- Log de análisis del servidor -->
+    <div class="scan-log-panel" id="log-analisis" style="display:none">
+      <div class="log-header">
+        <i class="bi bi-terminal" style="color:var(--sky)"></i>
+        BACKEND PYTHON — PROCESANDO SRS CON GEMINI
+      </div>
+      <div class="log-body" id="log-analisis-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANTALLA 3 — VISOR DUAL
+══════════════════════════════════════════════════════════════ -->
+<div id="s-visor" class="screen">
+  <div class="audit-layout">
+    <div class="audit-toolbar">
+      <span style="font-family:var(--mono);font-size:.6rem;color:var(--text-3);letter-spacing:1px">
+        <i class="bi bi-play-circle me-1" style="color:var(--sky)"></i>
+        AUDITORÍA DUAL — ANÁLISIS GEMINI 1.5 PRO VISION EN TIEMPO REAL
+      </span>
+      <div style="margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--sky)" id="audit-pct">0%</div>
+      <div class="prog-bar-wrap" style="width:180px;margin:0">
+        <div class="prog-fill" id="audit-bar"></div>
+      </div>
+      <button class="btn-sm" onclick="goScreen('s-resultados')" id="btn-ver-res" style="display:none">
+        <i class="bi bi-bar-chart-line"></i> VER RESULTADOS
+      </button>
+    </div>
+
+    <div class="audit-split">
+      <!-- Panel izquierdo: SRS con trazabilidad -->
+      <div class="split-pane">
+        <div class="pane-header">
+          <i class="bi bi-file-text"></i> DOCUMENTO SRS — TRAZABILIDAD DE CLÁUSULAS
+          <span style="margin-left:auto;color:var(--amber);font-size:.58rem" id="highlight-count"></span>
+        </div>
+        <div class="pane-body">
+          <div class="srs-doc" id="srs-viewer"></div>
+        </div>
+      </div>
+
+      <!-- Panel derecho: UI con bounding boxes -->
+      <div class="split-pane">
+        <div class="pane-header">
+          <i class="bi bi-display"></i> CAPTURA UI — OVERLAY DE BOUNDING BOXES
+          <span style="margin-left:auto;font-size:.58rem" id="bbox-count"></span>
+        </div>
+        <div class="pane-body">
+          <div class="ui-canvas" id="ui-canvas"></div>
+          <div class="scan-log-panel" style="margin-top:1rem">
+            <div class="log-header">
+              <i class="bi bi-terminal" style="color:var(--sky)"></i>
+              MOTOR DE AUDITORÍA GEMINI — REGISTRO DE ANÁLISIS
+            </div>
+            <div class="log-body" id="audit-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     PANTALLA 4 — RESULTADOS
+══════════════════════════════════════════════════════════════ -->
+<div id="s-resultados" class="screen">
+  <div class="results-layout">
+    <!-- Columna izquierda: Score + Exportar -->
+    <div style="display:flex;flex-direction:column;gap:1.25rem">
+      <div class="score-panel">
+        <div class="score-hero">
+          <div class="score-ring-wrap">
+            <svg viewBox="0 0 100 100" width="100" height="100">
+              <circle class="score-track" cx="50" cy="50" r="42"/>
+              <circle class="score-fill" id="score-ring-fill" cx="50" cy="50" r="42"/>
+            </svg>
+            <div class="score-num">
+              <div class="score-big" id="score-big">—</div>
+              <div class="score-lbl">PUNTAJE QA</div>
+            </div>
+          </div>
+          <div class="score-title">AUDITORÍA COMPLETA</div>
+          <div class="score-sub" id="score-sub">Guardado en SQLite</div>
+        </div>
+        <div class="score-stats" id="score-stats"></div>
+        <div class="export-btns">
+          <button class="btn-export" id="btn-pdf" onclick="exportarPDF()">
+            <i class="bi bi-file-pdf"></i> DESCARGAR REPORTE PDF (ReportLab)
+          </button>
+          <button class="btn-export" onclick="exportarCSV()">
+            <i class="bi bi-file-earmark-spreadsheet"></i> EXPORTAR CASOS CSV / TESTRAIL
+          </button>
+          <button class="btn-export" onclick="exportarJiraLote()">
+            <i class="bi bi-bug"></i> EXPORTAR TICKETS JIRA (LOTE)
+          </button>
+        </div>
+      </div>
+
+      <!-- WCAG -->
+      <div class="score-panel">
+        <div style="background:var(--card);padding:.7rem 1rem;border-bottom:1px solid var(--edge);font-family:var(--mono);font-size:.6rem;color:var(--text-3);letter-spacing:1px">
+          <i class="bi bi-universal-access me-1" style="color:var(--sky)"></i>
+          WCAG 2.1 AA — RESUMEN DE ACCESIBILIDAD
+        </div>
+        <div id="wcag-summary" style="padding:.8rem"></div>
+      </div>
+    </div>
+
+    <!-- Columna derecha: Hallazgos -->
+    <div class="findings-panel">
+      <div class="findings-toolbar">
+        <span class="findings-title">
+          <i class="bi bi-bug me-1" style="color:var(--sky)"></i>
+          HALLAZGOS — INSIDE THE LENS
+        </span>
+        <div class="filter-pills">
+          <button class="filter-pill active" onclick="filtrar('todos',this)">TODOS</button>
+          <button class="filter-pill" onclick="filtrar('critical',this)">CRÍTICO</button>
+          <button class="filter-pill" onclick="filtrar('high',this)">ALTO</button>
+          <button class="filter-pill" onclick="filtrar('medium',this)">MEDIO</button>
+          <button class="filter-pill" onclick="filtrar('low',this)">BAJO</button>
+        </div>
+      </div>
+      <div class="findings-list" id="findings-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODAL — TICKET JIRA
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-bd" id="modal-ticket">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <span class="modal-header-title">
+        <i class="bi bi-ticket-detailed me-2"></i>TICKET DE DEFECTO — LISTO PARA JIRA
+      </span>
+      <button class="modal-close" onclick="cerrarModal('modal-ticket')">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="modal-body" id="ticket-body"></div>
+    <div class="modal-footer">
+      <button class="btn-sm solid" onclick="copiarTicket()">
+        <i class="bi bi-clipboard2-check"></i> COPIAR PARA JIRA
+      </button>
+      <button class="btn-sm" onclick="cerrarModal('modal-ticket')">
+        <i class="bi bi-x"></i> CERRAR
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODAL — AUTENTICACIÓN
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-bd" id="modal-auth">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-header-title">
+        <i class="bi bi-shield-lock me-2"></i>ACCESO AL ESPACIO DE TRABAJO SIDL
+      </span>
+      <button class="modal-close" onclick="cerrarModal('modal-auth')">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="auth-tabs-row">
+        <button class="auth-tab-btn active" id="atab-in"  onclick="tabAuth('in')">INICIAR SESIÓN</button>
+        <button class="auth-tab-btn"        id="atab-reg" onclick="tabAuth('reg')">REGISTRARSE</button>
+      </div>
+
+      <!-- Login -->
+      <div id="auth-in">
+        <div class="f-group">
+          <label class="f-label">CORREO ELECTRÓNICO</label>
+          <input class="f-input" id="si-email" type="email" placeholder="qa.lider@empresa.com">
+        </div>
+        <div class="f-group">
+          <label class="f-label">CONTRASEÑA</label>
+          <input class="f-input" id="si-pass" type="password" placeholder="••••••••">
+        </div>
+        <div class="f-error" id="si-err"></div>
+        <button class="btn-auth" onclick="doLogin()">
+          <i class="bi bi-box-arrow-in-right me-2"></i>ACCEDER AL ESPACIO DE TRABAJO
+        </button>
+        <div style="text-align:center;margin-top:.8rem;font-family:var(--mono);font-size:.6rem;color:var(--text-4)">
+          ¿Sin cuenta?
+          <button onclick="tabAuth('reg')" style="background:none;border:none;color:var(--sky);cursor:pointer;font-family:var(--mono);font-size:.6rem">
+            Regístrate →
+          </button>
+        </div>
+      </div>
+
+      <!-- Registro -->
+      <div id="auth-reg" style="display:none">
+        <div class="f-group">
+          <label class="f-label">NOMBRE COMPLETO</label>
+          <input class="f-input" id="rg-name" type="text" placeholder="Ingeniero QA Senior">
+        </div>
+        <div class="f-group">
+          <label class="f-label">CORREO ELECTRÓNICO</label>
+          <input class="f-input" id="rg-email" type="email" placeholder="qa.lider@empresa.com">
+        </div>
+        <div class="f-group">
+          <label class="f-label">CONTRASEÑA</label>
+          <input class="f-input" id="rg-pass" type="password" placeholder="Mín. 6 caracteres">
+        </div>
+        <div class="f-group">
+          <label class="f-label">CONFIRMAR CONTRASEÑA</label>
+          <input class="f-input" id="rg-conf" type="password" placeholder="Repite la contraseña">
+        </div>
+        <div class="f-error" id="rg-err"></div>
+        <button class="btn-auth" onclick="doRegistro()">
+          <i class="bi bi-person-plus me-2"></i>CREAR ESPACIO DE TRABAJO
+        </button>
+        <div style="text-align:center;margin-top:.8rem;font-family:var(--mono);font-size:.6rem;color:var(--text-4)">
+          ¿Ya tienes cuenta?
+          <button onclick="tabAuth('in')" style="background:none;border:none;color:var(--sky);cursor:pointer;font-family:var(--mono);font-size:.6rem">
+            Inicia sesión →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     MODAL — HISTORIAL
+══════════════════════════════════════════════════════════════ -->
+<div class="modal-bd" id="modal-historial">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <span class="modal-header-title">
+        <i class="bi bi-clock-history me-2"></i>HISTORIAL DE AUDITORÍAS — SQLITE
+      </span>
+      <button class="modal-close" onclick="cerrarModal('modal-historial')">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="modal-body" id="historial-body" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="cerrarModal('modal-historial')">
+        <i class="bi bi-x"></i> CERRAR
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     LOADING OVERLAY
+══════════════════════════════════════════════════════════════ -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loading-msg">PROCESANDO...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-nb" id="toast">
+  <i class="bi bi-check-circle-fill"></i>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/sidl.js"></script>
+</body>
+</html>
