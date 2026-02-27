@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiDL — Plataforma de Auditoría Visual QA</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+:root {
+  --ink:#050b14;--surface:#091120;--panel:#0c1829;--card:#101f35;--raised:#152741;
+  --edge:rgba(56,189,248,0.1);--edge-bright:rgba(56,189,248,0.28);
+  --sky:#38bdf8;--sky-dim:rgba(56,189,248,0.06);--sky-glow:rgba(56,189,248,0.18);
+  --cobalt:#0f4c8a;--cobalt-deep:#072a52;
+  --amber:#f59e0b;--red:#ef4444;--green:#10b981;--purple:#a78bfa;
+  --text-1:#f0f8ff;--text-2:#7ca3c4;--text-3:#3d6484;--text-4:#1e3a57;
+  --mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;
+  --r:8px;--r-lg:12px;--tr:0.22s cubic-bezier(0.4,0,0.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--ink);color:var(--text-1);font-family:var(--sans);font-size:14px;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(56,189,248,.024) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.024) 1px,transparent 1px);background-size:32px 32px;pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;top:0;left:0;width:140px;height:140px;border-top:1px solid rgba(56,189,248,.2);border-left:1px solid rgba(56,189,248,.2);pointer-events:none;z-index:1}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--ink)}::-webkit-scrollbar-thumb{background:var(--cobalt);border-radius:10px}
+
+/* TOPBAR */
+.topbar{position:sticky;top:0;z-index:500;height:56px;background:rgba(5,11,20,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--edge);display:flex;align-items:center;padding:0 1.5rem;gap:8px;overflow:hidden}
+.logo{display:flex;align-items:baseline;gap:4px;font-family:var(--sans);font-weight:800;font-size:1.25rem;letter-spacing:-.5px;text-decoration:none;color:var(--text-1);white-space:nowrap}
+.logo-accent{color:var(--sky)}
+.logo-tag{font-family:var(--mono);font-size:.5rem;letter-spacing:2px;color:var(--sky);background:var(--sky-dim);border:1px solid var(--edge-bright);padding:2px 6px;border-radius:3px;align-self:center;margin-left:4px}
+.topbar-sep{flex:1;min-width:8px}
+.topbar-status{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.62rem;color:var(--text-3);letter-spacing:1px;white-space:nowrap}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:blink 2s ease-in-out infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.topbar-btn{background:none;border:1px solid var(--edge);color:var(--text-2);padding:5px 12px;border-radius:var(--r);font-family:var(--mono);font-size:.62rem;letter-spacing:1px;cursor:pointer;transition:all var(--tr);display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0}
+.topbar-btn:hover{color:var(--sky);border-color:var(--sky);background:var(--sky-dim)}
+.topbar-btn.primary{background:var(--cobalt);border-color:var(--cobalt);color:#fff}
+.topbar-btn.primary:hover{background:var(--sky);border-color:var(--sky);color:var(--ink)}
+.user-chip-nb{display:flex;align-items:center;gap:6px;background:var(--sky-dim);border:1px solid var(--edge-bright);border-radius:100px;padding:3px 10px 3px 4px;cursor:pointer;transition:all var(--tr);font-family:var(--mono);font-size:.6rem;color:var(--text-2);white-space:nowrap;flex-shrink:0}
+.user-chip-nb:hover{border-color:var(--sky);color:var(--sky)}
+.u-avatar{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--cobalt),var(--sky));display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:700;color:#fff}
+.hist-badge{background:var(--sky);color:var(--ink);border-radius:100px;font-size:.52rem;font-weight:700;padding:1px 5px}
+
+/* STEPPER */
+.stepper-bar{background:var(--surface);border-bottom:1px solid var(--edge);padding:0 1.5rem;display:flex;align-items:stretch;gap:0;overflow-x:auto;scrollbar-width:none;position:relative;z-index:1}
+.stepper-bar::-webkit-scrollbar{display:none}
+.step-item{display:flex;align-items:center;gap:8px;padding:.7rem 1.2rem;font-family:var(--mono);font-size:.62rem;letter-spacing:1px;color:var(--text-3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all var(--tr)}
+.step-item:hover{color:var(--text-2)}
+.step-item.active{color:var(--sky);border-bottom-color:var(--sky)}
+.step-item.done{color:var(--green)}
+.step-num{width:20px;height:20px;border-radius:50%;border:1px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:700;flex-shrink:0}
+.step-item.active .step-num{background:var(--sky);border-color:var(--sky);color:var(--ink)}
+.step-item.done .step-num{background:var(--green);border-color:var(--green);color:var(--ink)}
+.step-connector{width:24px;height:1px;background:var(--edge);align-self:center;flex-shrink:0}
+
+/* SCREENS */
+.screen{display:none}
+.screen.active{display:block;animation:screenIn .35s cubic-bezier(.4,0,.2,1)}
+@keyframes screenIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* PANTALLA 1 */
+.intake-layout{max-width:1000px;margin:0 auto;padding:3rem 1.5rem;position:relative;z-index:1}
+.intake-headline{text-align:center;margin-bottom:3rem}
+.intake-headline h1{font-size:clamp(2rem,4vw,3.2rem);font-weight:800;letter-spacing:-1px;line-height:1;margin-bottom:.5rem}
+.intake-headline h1 em{font-style:normal;color:var(--sky)}
+.intake-headline p{font-family:var(--mono);font-size:.72rem;color:var(--text-3);letter-spacing:1px}
+.drop-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:2rem}
+@media(max-width:640px){.drop-grid{grid-template-columns:1fr}}
+.dz{border:1px dashed var(--edge-bright);border-radius:var(--r-lg);background:var(--panel);padding:2.5rem 1.5rem;text-align:center;cursor:pointer;position:relative;overflow:hidden;transition:all var(--tr)}
+.dz::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 60%,var(--sky-glow) 0%,transparent 70%);opacity:0;transition:opacity var(--tr)}
+.dz:hover,.dz.over{border-color:var(--sky)}
+.dz:hover::before,.dz.over::before{opacity:1}
+.dz.filled{border-style:solid;border-color:var(--green);box-shadow:0 0 24px rgba(16,185,129,.12)}
+.dz-icon{font-size:2.2rem;color:var(--sky);display:block;margin-bottom:.8rem;position:relative;z-index:1}
+.dz-slot{font-family:var(--mono);font-size:.58rem;letter-spacing:2px;color:var(--sky);margin-bottom:.4rem;position:relative;z-index:1}
+.dz-title{font-weight:700;font-size:.95rem;margin-bottom:.3rem;position:relative;z-index:1}
+.dz-sub{font-family:var(--mono);font-size:.65rem;color:var(--text-3);position:relative;z-index:1}
+.dz-filename{display:none;font-family:var(--mono);font-size:.7rem;color:var(--green);margin-top:.7rem;position:relative;z-index:1;word-break:break-all}
+.dz.filled .dz-filename{display:block}
+.dz.filled .dz-default{display:none}
+.cta-row{display:flex;flex-direction:column;align-items:center;gap:.8rem}
+.btn-launch{background:linear-gradient(135deg,var(--cobalt-deep),var(--cobalt),var(--sky));background-size:200% 200%;animation:gradShift 4s ease infinite;color:#fff;border:none;border-radius:var(--r-lg);padding:.9rem 3rem;font-family:var(--sans);font-weight:700;font-size:1rem;letter-spacing:1px;cursor:pointer;transition:all var(--tr);box-shadow:0 4px 24px rgba(56,189,248,.25);display:flex;align-items:center;gap:8px}
+.btn-launch:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(56,189,248,.4)}
+.btn-launch:disabled{opacity:.4;cursor:not-allowed;transform:none;animation:none}
+@keyframes gradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.btn-demo{background:none;border:1px dashed var(--edge-bright);color:var(--text-3);padding:6px 18px;border-radius:var(--r);font-family:var(--mono);font-size:.65rem;cursor:pointer;transition:all var(--tr);letter-spacing:1px}
+.btn-demo:hover{color:var(--sky);border-color:var(--sky)}
+
+/* PANTALLA 2 - CASOS */
+.tc-layout{max-width:1200px;margin:0 auto;padding:2rem 1.5rem;position:relative;z-index:1}
+.section-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
+.section-title{font-size:1.5rem;font-weight:800;letter-spacing:-.5px}
+.section-title em{font-style:normal;color:var(--sky)}
+.section-sub{font-family:var(--mono);font-size:.62rem;color:var(--text-3);margin-top:3px}
+.btn-group-sm{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.btn-sm{background:none;border:1px solid var(--edge);color:var(--text-2);padding:5px 12px;border-radius:var(--r);font-family:var(--mono);font-size:.62rem;cursor:pointer;transition:all var(--tr);display:flex;align-items:center;gap:5px;letter-spacing:.5px}
+.btn-sm:hover{color:var(--sky);border-color:var(--sky);background:var(--sky-dim)}
+.btn-sm.solid{background:var(--cobalt);border-color:var(--cobalt);color:#fff}
+.btn-sm.solid:hover{background:var(--sky);border-color:var(--sky);color:var(--ink)}
+.tc-table-wrap{background:var(--panel);border:1px solid var(--edge);border-radius:var(--r-lg);overflow:hidden}
+.tc-table{width:100%;border-collapse:collapse}
+.tc-table thead th{background:var(--card);padding:.65rem .9rem;font-family:var(--mono);font-size:.58rem;letter-spacing:1.5px;color:var(--text-3);text-align:left;border-bottom:1px solid var(--edge);white-space:nowrap}
+.tc-table tbody tr{border-bottom:1px solid rgba(56,189,248,.05);transition:background var(--tr)}
+.tc-table tbody tr:hover{background:var(--sky-dim)}
+.tc-table tbody tr:last-child{border-bottom:none}
+.tc-table td{padding:.6rem .9rem;vertical-align:top;font-size:.82rem;color:var(--text-1)}
+.cell-edit{outline:none;background:transparent;color:inherit;font-family:inherit;font-size:inherit;width:100%;border:none;resize:none;min-height:1.2em;cursor:text;transition:all var(--tr);border-radius:4px;padding:2px 4px}
+.cell-edit:focus{background:var(--raised);outline:1px solid var(--sky);color:var(--text-1)}
+.prio{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:.58rem;font-weight:600;padding:3px 8px;border-radius:100px;letter-spacing:.5px;border:1px solid;white-space:nowrap}
+.prio.critical{background:rgba(239,68,68,.12);color:var(--red);border-color:rgba(239,68,68,.35)}
+.prio.high{background:rgba(245,158,11,.12);color:var(--amber);border-color:rgba(245,158,11,.35)}
+.prio.medium{background:rgba(56,189,248,.12);color:var(--sky);border-color:rgba(56,189,248,.35)}
+.prio.low{background:rgba(16,185,129,.12);color:var(--green);border-color:rgba(16,185,129,.35)}
+.row-actions{display:flex;gap:4px;align-items:center}
+.row-btn{background:none;border:1px solid var(--edge);color:var(--text-3);width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--tr);font-size:.75rem}
+.row-btn:hover{color:var(--sky);border-color:var(--sky)}
+.row-btn.del:hover{color:var(--red);border-color:var(--red)}
+.tc-footer{background:var(--card);padding:.6rem .9rem;border-top:1px solid var(--edge);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+.tc-count{font-family:var(--mono);font-size:.62rem;color:var(--text-3)}
+
+/* PANTALLA 3 - VISOR DUAL */
+.audit-layout{display:grid;grid-template-rows:auto 1fr;height:calc(100vh - 56px - 44px);position:relative;z-index:1;overflow:hidden}
+.audit-toolbar{background:var(--surface);border-bottom:1px solid var(--edge);padding:.5rem 1.2rem;display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}
+.audit-split{display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+@media(max-width:800px){.audit-split{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+.split-pane{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--edge)}
+.split-pane:last-child{border-right:none}
+.pane-header{background:var(--card);padding:.5rem 1rem;font-family:var(--mono);font-size:.6rem;letter-spacing:1px;color:var(--text-3);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--edge);flex-shrink:0}
+.pane-header i{color:var(--sky)}
+.pane-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:1rem}
+.srs-doc{font-family:var(--mono);font-size:.72rem;line-height:1.9;color:var(--text-2);white-space:pre-wrap}
+.srs-clause{display:block}
+.srs-clause.highlighted{background:rgba(245,158,11,.12);border-left:2px solid var(--amber);padding:2px 6px;border-radius:0 4px 4px 0;color:var(--amber);animation:clauseFlash .5s ease}
+@keyframes clauseFlash{0%{background:rgba(245,158,11,.35)}100%{background:rgba(245,158,11,.12)}}
+.ui-canvas{position:relative;width:100%;display:flex;align-items:center;justify-content:center}
+.ui-mock-wrap{position:relative;width:360px;background:#fff;border-radius:10px;box-shadow:0 12px 48px rgba(0,0,0,.6);overflow:hidden;font-family:'Segoe UI',sans-serif;flex-shrink:0}
+.bbox{position:absolute;border:2px solid;border-radius:3px;pointer-events:none;opacity:0;transition:opacity .4s ease}
+.bbox.show{opacity:1;animation:bboxPulse .6s ease}
+.bbox.error{border-color:var(--red);box-shadow:0 0 10px rgba(239,68,68,.3)}
+.bbox.warn{border-color:var(--amber);box-shadow:0 0 10px rgba(245,158,11,.3)}
+.bbox.ok{border-color:var(--green);box-shadow:0 0 10px rgba(16,185,129,.3)}
+@keyframes bboxPulse{0%{transform:scale(1.05)}100%{transform:scale(1)}}
+.bbox-label{position:absolute;top:-18px;left:0;font-family:var(--mono);font-size:.55rem;padding:1px 5px;border-radius:3px 3px 0 0;white-space:nowrap;font-weight:600}
+.bbox.error .bbox-label{background:var(--red);color:#fff}
+.bbox.warn .bbox-label{background:var(--amber);color:var(--ink)}
+.bbox.ok .bbox-label{background:var(--green);color:var(--ink)}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--sky),transparent);box-shadow:0 0 8px var(--sky);top:0;animation:scanDown 2.5s ease-in-out infinite;opacity:0}
+.scan-line.running{opacity:1}
+@keyframes scanDown{0%{top:0%}100%{top:100%}}
+.scan-overlay{position:absolute;inset:0;background:rgba(5,11,20,.7);backdrop-filter:blur(2px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.8rem;z-index:10;opacity:0;pointer-events:none;transition:opacity .3s;border-radius:10px}
+.scan-overlay.show{opacity:1;pointer-events:all}
+.ring-track{fill:none;stroke:var(--raised);stroke-width:4}
+.ring-fill{fill:none;stroke:var(--sky);stroke-width:4;stroke-linecap:round;stroke-dasharray:151;stroke-dashoffset:151;transition:stroke-dashoffset .5s ease}
+.ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:.65rem;font-weight:600;color:var(--sky)}
+
+/* PANTALLA 4 - RESULTADOS */
+.results-layout{max-width:1400px;margin:0 auto;padding:1.5rem;display:grid;grid-template-columns:380px 1fr;gap:1.25rem;position:relative;z-index:1}
+@media(max-width:960px){.results-layout{grid-template-columns:1fr}}
+.score-panel{background:var(--panel);border:1px solid var(--edge);border-radius:var(--r-lg);overflow:hidden}
+.score-hero{background:linear-gradient(135deg,var(--cobalt-deep),var(--cobalt));padding:1.5rem;text-align:center;position:relative;overflow:hidden}
+.score-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 120%,rgba(56,189,248,.3) 0%,transparent 60%)}
+.score-ring-wrap{position:relative;width:100px;height:100px;margin:0 auto .8rem}
+.score-ring-wrap svg{transform:rotate(-90deg)}
+.score-track{fill:none;stroke:rgba(255,255,255,.1);stroke-width:8}
+.score-fill{fill:none;stroke-width:8;stroke-linecap:round;stroke-dasharray:263;transition:stroke-dashoffset 1.5s cubic-bezier(.4,0,.2,1)}
+.score-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.score-big{font-family:var(--sans);font-size:2rem;font-weight:800;line-height:1;position:relative;z-index:1}
+.score-lbl{font-family:var(--mono);font-size:.5rem;letter-spacing:1.5px;color:rgba(255,255,255,.6);position:relative;z-index:1}
+.score-title{font-weight:700;font-size:.9rem;position:relative;z-index:1}
+.score-sub{font-family:var(--mono);font-size:.6rem;color:rgba(255,255,255,.5);margin-top:2px;position:relative;z-index:1}
+.score-stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--edge)}
+.score-stat{background:var(--card);padding:.8rem 1rem;text-align:center}
+.score-stat-n{font-family:var(--sans);font-weight:700;font-size:1.4rem;line-height:1}
+.score-stat-l{font-family:var(--mono);font-size:.55rem;letter-spacing:1px;color:var(--text-3);margin-top:3px}
+.export-btns{padding:1rem;display:flex;flex-direction:column;gap:6px}
+.btn-export{background:var(--card);border:1px solid var(--edge);color:var(--text-2);padding:.55rem 1rem;border-radius:var(--r);font-family:var(--mono);font-size:.62rem;cursor:pointer;transition:all var(--tr);display:flex;align-items:center;gap:8px;width:100%}
+.btn-export:hover{background:var(--raised);border-color:var(--sky);color:var(--sky)}
+.btn-export:disabled{opacity:.4;cursor:not-allowed}
+.findings-panel{background:var(--panel);border:1px solid var(--edge);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column}
+.findings-toolbar{background:var(--card);padding:.6rem 1rem;border-bottom:1px solid var(--edge);display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}
+.findings-title{font-family:var(--mono);font-size:.65rem;letter-spacing:1px;color:var(--text-3)}
+.filter-pills{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.filter-pill{background:none;border:1px solid var(--edge);color:var(--text-3);padding:2px 10px;border-radius:100px;font-family:var(--mono);font-size:.58rem;cursor:pointer;transition:all var(--tr);letter-spacing:.5px}
+.filter-pill:hover{color:var(--text-2);border-color:var(--text-3)}
+.filter-pill.active{color:var(--sky);border-color:var(--sky);background:var(--sky-dim)}
+.findings-list{flex:1;overflow-y:auto;padding:.8rem;display:flex;flex-direction:column;gap:.6rem;max-height:520px}
+.finding{background:var(--card);border:1px solid var(--edge);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:border-color var(--tr)}
+.finding:hover{border-color:var(--edge-bright)}
+.finding.expanded{border-color:var(--sky)}
+.finding.dismissed{opacity:.45}
+.finding-top{padding:.65rem .9rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.finding-id{font-family:var(--mono);font-size:.58rem;color:var(--text-4);background:var(--raised);padding:2px 6px;border-radius:3px}
+.finding-name{font-weight:600;font-size:.82rem;flex:1;min-width:120px}
+.finding-chevron{color:var(--text-3);font-size:.75rem;transition:transform var(--tr);margin-left:auto}
+.finding.expanded .finding-chevron{transform:rotate(90deg)}
+.finding-detail{display:none;border-top:1px solid var(--edge);padding:.8rem .9rem;animation:detailIn .25s ease}
+.finding.expanded .finding-detail{display:block}
+@keyframes detailIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.clause-link{font-family:var(--mono);font-size:.65rem;color:var(--sky);background:var(--sky-dim);border-left:2px solid var(--sky);padding:3px 8px;border-radius:0 4px 4px 0;margin-bottom:.5rem;display:inline-block}
+.finding-desc{font-size:.8rem;color:var(--text-2);line-height:1.55;margin-bottom:.6rem}
+.technique-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:.6rem}
+.tech-badge{font-family:var(--mono);font-size:.58rem;color:var(--purple);background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;gap:4px}
+.finding-actions{display:flex;gap:5px;flex-wrap:wrap;padding-top:.5rem;border-top:1px solid var(--edge);margin-top:.5rem}
+.fa-btn{background:none;border:1px solid var(--edge);color:var(--text-2);padding:3px 10px;border-radius:4px;font-family:var(--mono);font-size:.58rem;cursor:pointer;transition:all var(--tr);display:flex;align-items:center;gap:4px}
+.fa-btn:hover{color:var(--sky);border-color:var(--sky)}
+
+/* MODALES */
+.modal-bd{position:fixed;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(10px);z-index:900;display:none;align-items:center;justify-content:center}
+.modal-bd.show{display:flex}
+.modal-box{background:var(--panel);border:1px solid var(--edge-bright);border-radius:var(--r-lg);max-width:600px;width:94%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 80px rgba(0,0,0,.8),0 0 40px var(--sky-glow);animation:modalIn .28s cubic-bezier(.4,0,.2,1)}
+.modal-box.wide{max-width:800px}
+@keyframes modalIn{from{transform:scale(.93) translateY(12px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.modal-header{background:var(--card);padding:.9rem 1.2rem;border-bottom:1px solid var(--edge);display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+.modal-header-title{font-family:var(--mono);font-size:.65rem;letter-spacing:1.5px;color:var(--sky)}
+.modal-close{background:none;border:none;color:var(--text-3);font-size:1.1rem;cursor:pointer;transition:color var(--tr);line-height:1}
+.modal-close:hover{color:var(--red)}
+.modal-body{padding:1.2rem}
+.modal-footer{padding:.9rem 1.2rem;border-top:1px solid var(--edge);display:flex;gap:8px;flex-wrap:wrap}
+.t-field{margin-bottom:.9rem}
+.t-label{font-family:var(--mono);font-size:.58rem;letter-spacing:1.5px;color:var(--text-3);text-transform:uppercase;margin-bottom:4px}
+.t-val{background:var(--card);border:1px solid var(--edge);border-radius:var(--r);padding:.55rem .8rem;font-family:var(--mono);font-size:.7rem;color:var(--text-1);line-height:1.6;white-space:pre-wrap}
+.auth-tabs-row{display:flex;border-bottom:1px solid var(--edge);margin-bottom:1.4rem}
+.auth-tab-btn{flex:1;background:none;border:none;border-bottom:2px solid transparent;color:var(--text-3);padding:.6rem;font-family:var(--mono);font-size:.65rem;letter-spacing:1.5px;cursor:pointer;transition:all var(--tr)}
+.auth-tab-btn:hover{color:var(--text-2)}
+.auth-tab-btn.active{color:var(--sky);border-bottom-color:var(--sky)}
+.f-group{margin-bottom:.9rem}
+.f-label{display:block;font-family:var(--mono);font-size:.6rem;letter-spacing:1px;color:var(--text-3);margin-bottom:5px}
+.f-input{width:100%;background:var(--card);border:1px solid var(--edge);color:var(--text-1);border-radius:var(--r);padding:.55rem .8rem;font-family:var(--mono);font-size:.78rem;outline:none;transition:border-color var(--tr)}
+.f-input:focus{border-color:var(--sky)}
+.f-error{display:none;margin-bottom:.7rem;font-family:var(--mono);font-size:.63rem;color:var(--red);background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);padding:6px 10px;border-radius:var(--r)}
+.btn-auth{width:100%;background:linear-gradient(135deg,var(--cobalt),var(--sky));color:#fff;border:none;border-radius:var(--r);padding:.7rem;font-family:var(--sans);font-weight:700;font-size:.9rem;cursor:pointer;transition:all var(--tr);margin-top:.3rem}
+.btn-auth:hover{transform:translateY(-1px);box-shadow:0 4px 20px var(--sky-glow)}
+
+/* LOG / PROGRESS */
+.scan-log-panel{background:var(--panel);border:1px solid var(--edge);border-radius:var(--r-lg);overflow:hidden;margin-top:1rem}
+.log-header{background:var(--card);padding:.5rem .9rem;font-family:var(--mono);font-size:.6rem;letter-spacing:1px;color:var(--text-3);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--edge)}
+.log-body{padding:.6rem;height:130px;overflow-y:auto;font-family:var(--mono);font-size:.68rem;line-height:1.7}
+.log-line{color:var(--text-3)}
+.log-line.ok{color:var(--green)}.log-line.warn{color:var(--amber)}.log-line.hi{color:var(--sky)}.log-line.err{color:var(--red)}
+.prog-bar-wrap{background:var(--raised);border-radius:100px;height:4px;overflow:hidden;margin:.4rem 0;border:1px solid var(--edge)}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--cobalt),var(--sky));border-radius:100px;width:0%;transition:width .4s ease;box-shadow:0 0 8px var(--sky)}
+
+/* HISTORIAL */
+.hist-item{background:var(--card);border:1px solid var(--edge);border-radius:var(--r);margin-bottom:.6rem;overflow:hidden;transition:border-color var(--tr)}
+.hist-item:hover{border-color:var(--edge-bright)}
+.hist-top{padding:.65rem .9rem;display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}
+.hist-score-chip{font-family:var(--sans);font-weight:700;font-size:1.1rem;padding:3px 10px;border-radius:6px;background:var(--raised);min-width:44px;text-align:center}
+.hist-bottom{padding:.5rem .9rem;border-top:1px solid var(--edge);background:rgba(0,0,0,.12);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hist-empty{text-align:center;padding:3rem;font-family:var(--mono);font-size:.72rem;color:var(--text-4)}
+.hist-empty i{font-size:2rem;display:block;margin-bottom:.6rem}
+
+/* TOAST */
+.toast-nb{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--panel);border:1px solid var(--green);border-radius:var(--r);padding:.7rem 1rem;font-family:var(--mono);font-size:.7rem;color:var(--green);display:flex;align-items:center;gap:7px;box-shadow:0 4px 20px rgba(16,185,129,.2);z-index:999;transform:translateX(200%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+.toast-nb.show{transform:translateX(0)}
+.toast-nb.error{border-color:var(--red);color:var(--red)}
+
+/* Spinner overlay global */
+.loading-overlay{position:fixed;inset:0;background:rgba(5,11,20,.85);backdrop-filter:blur(6px);z-index:800;display:none;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
+.loading-overlay.show{display:flex}
+.spinner{width:44px;height:44px;border:3px solid var(--edge);border-top-color:var(--sky);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-family:var(--mono);font-size:.72rem;color:var(--sky);letter-spacing:1px}
+</style>
+</head>
+<body>
+
+<!-- BARRA SUPERIOR -->
+<header class="topbar">
+  <a class="logo" href="#" onclick="goScreen('s-ingesta')">
+    Si<span class="logo-accent">DL</span>
+    <span class="logo-tag">BETA v1.0</span>
+  </a>
+  <div class="topbar-sep"></div>
+  <div class="topbar-status">
+    <span class="pulse-dot"></span>
+    FASTAPI + GEMINI 1.5 PRO
+  </div>
+  <div id="nb-auth-area" style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;flex-shrink:0">
+    <button class="topbar-btn" onclick="abrirAuth()"><i class="bi bi-person"></i> INICIAR SESIÓN</button>
+  </div>
+  <button class="topbar-btn primary" onclick="goScreen('s-ingesta')">
+    <i class="bi bi-plus-lg"></i> NUEVA AUDITORÍA
+  </button>
+</header>
+
+<!-- INDICADOR DE PASOS -->
+<div class="stepper-bar">
+  <div class="step-item active" id="step-1" onclick="goScreen('s-ingesta')"><div class="step-num">1</div> INGESTA</div>
+  <div class="step-connector"></div>
+  <div class="step-item" id="step-2" onclick="pasoProtegido('s-casos',2)"><div class="step-num">2</div> CASOS DE PRUEBA</div>
+  <div class="step-connector"></div>
+  <div class="step-item" id="step-3" onclick="pasoProtegido('s-visor',3)"><div class="step-num">3</div> VISOR DUAL</div>
+  <div class="step-connector"></div>
+  <div class="step-item" id="step-4" onclick="pasoProtegido('s-resultados',4)"><div class="step-num">4</div> RESULTADOS</div>
+</div>
+
+<!-- ══ PANTALLA 1: INGESTA ══ -->
+<div id="s-ingesta" class="screen active">
+  <div class="intake-layout">
+    <div class="intake-headline">
+      <h1>PLATAFORMA DE AUDITORÍA<br><em>MULTIMODAL QA</em></h1>
+      <p>// CARGA EL SRS + CAPTURA DE PANTALLA — PYTHON + IA VALIDA EL CUMPLIMIENTO</p>
+    </div>
+    <div class="drop-grid">
+      <div class="dz" id="dz-srs" onclick="document.getElementById('fi-srs').click()"
+        ondragover="dzOver(event,'dz-srs')" ondragleave="dzLeave('dz-srs')" ondrop="dzDrop(event,'dz-srs','fi-srs')">
+        <input type="file" id="fi-srs" accept=".pdf,.docx,.txt" style="display:none" onchange="dzArchivo(this,'dz-srs')">
+        <i class="bi bi-file-earmark-richtext dz-icon"></i>
+        <div class="dz-default">
+          <div class="dz-slot">MÓDULO 01 — ANALIZADOR DE REQUISITOS</div>
+          <div class="dz-title">Documento de Requisitos (SRS)</div>
+          <div class="dz-sub">PDF · DOCX · TXT — Máx. 50 MB</div>
+          <div style="margin-top:.7rem;font-family:var(--mono);font-size:.58rem;color:var(--text-4);letter-spacing:1px">ARRASTRA Y SUELTA O HAZ CLIC</div>
+        </div>
+        <div class="dz-filename" id="srs-fn">—</div>
+      </div>
+      <div class="dz" id="dz-ui" onclick="document.getElementById('fi-ui').click()"
+        ondragover="dzOver(event,'dz-ui')" ondragleave="dzLeave('dz-ui')" ondrop="dzDrop(event,'dz-ui','fi-ui')">
+        <input type="file" id="fi-ui" accept="image/*" style="display:none" onchange="dzArchivo(this,'dz-ui')">
+        <i class="bi bi-display dz-icon"></i>
+        <div class="dz-default">
+          <div class="dz-slot">MÓDULO 02 — MOTOR DE AUDITORÍA VISUAL</div>
+          <div class="dz-title">Captura de Pantalla de la UI</div>
+          <div class="dz-sub">PNG · JPG · WebP — Máx. 20 MB</div>
+          <div style="margin-top:.7rem;font-family:var(--mono);font-size:.58rem;color:var(--text-4);letter-spacing:1px">ARRASTRA Y SUELTA O HAZ CLIC</div>
+        </div>
+        <div class="dz-filename" id="ui-fn">—</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:1.5rem">
+      <span style="font-family:var(--mono);font-size:.6rem;color:var(--text-3);background:var(--card);border:1px solid var(--edge);padding:4px 10px;border-radius:100px"><i class="bi bi-cpu me-1" style="color:var(--sky)"></i>FastAPI + Python</span>
+      <span style="font-family:var(--mono);font-size:.6rem;color:var(--text-3);background:var(--card);border:1px solid var(--edge);padding:4px 10px;border-radius:100px"><i class="bi bi-eye me-1" style="color:var(--sky)"></i>Gemini 1.5 Pro</span>
+      <span style="font-family:var(--mono);font-size:.6rem;color:var(--text-3);background:var(--card);border:1px solid var(--edge);padding:4px 10px;border-radius:100px"><i class="bi bi-file-pdf me-1" style="color:var(--sky)"></i>ReportLab PDF</span>
+      <span style="font-family:var(--mono);font-size:.6rem;color:var(--text-3);background:var(--card);border:1px solid var(--edge);padding:4px 10px;border-radius:100px"><i class="bi bi-file-earmark me-1" style="color:var(--sky)"></i>PyMuPDF</span>
+    </div>
+    <div class="cta-row">
+      <button class="btn-launch" id="btn-launch" onclick="iniciarAnalisis()">
+        <i class="bi bi-cpu-fill"></i> ANALIZAR REQUISITOS Y GENERAR CASOS DE PRUEBA
+      </button>
+      <button class="btn-demo" onclick="iniciarDemo()">
+        <i class="bi bi-play-circle me-1"></i> DEMO RÁPIDO — sin necesidad de archivos
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANTALLA 2: CASOS DE PRUEBA ══ -->
+<div id="s-casos" class="screen">
+  <div class="tc-layout">
+    <div class="section-header">
+      <div>
+        <div class="section-title">GESTIÓN DE <em>CASOS DE PRUEBA</em></div>
+        <div class="section-sub" id="tc-fuente">// GENERADOS POR IA — REVISA, EDITA Y REFINA ANTES DE AUDITAR</div>
+      </div>
+      <div class="btn-group-sm">
+        <button class="btn-sm" onclick="agregarFila()"><i class="bi bi-plus-lg"></i> AGREGAR FILA</button>
+        <button class="btn-sm" onclick="exportarCSV()"><i class="bi bi-file-earmark-spreadsheet"></i> EXPORTAR CSV</button>
+        <button class="btn-sm solid" onclick="lanzarAuditoria()"><i class="bi bi-play-fill"></i> LANZAR AUDITORÍA</button>
+      </div>
+    </div>
+    <div class="tc-table-wrap">
+      <table class="tc-table">
+        <thead><tr>
+          <th style="width:80px">ID</th>
+          <th style="width:110px">PRIORIDAD</th>
+          <th style="width:25%">NOMBRE DEL CASO</th>
+          <th>PRECONDICIONES</th>
+          <th>PASOS</th>
+          <th>RESULTADO ESPERADO</th>
+          <th style="width:65px">REF. SRS</th>
+          <th style="width:70px">ACCIONES</th>
+        </tr></thead>
+        <tbody id="tc-body"></tbody>
+      </table>
+      <div class="tc-footer">
+        <span class="tc-count" id="tc-count">0 casos</span>
+        <span class="tc-count" style="color:var(--sky)">// Edición Colaborativa Humano-IA</span>
+      </div>
+    </div>
+    <div class="scan-log-panel" id="log-analisis" style="display:none">
+      <div class="log-header"><i class="bi bi-terminal" style="color:var(--sky)"></i> BACKEND PYTHON — PROCESANDO SRS</div>
+      <div class="log-body" id="log-analisis-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANTALLA 3: VISOR DUAL ══ -->
+<div id="s-visor" class="screen">
+  <div class="audit-layout">
+    <div class="audit-toolbar">
+      <span style="font-family:var(--mono);font-size:.6rem;color:var(--text-3);letter-spacing:1px">
+        <i class="bi bi-play-circle me-1" style="color:var(--sky)"></i>AUDITORÍA DUAL — ANÁLISIS EN TIEMPO REAL
+      </span>
+      <div style="margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--sky)" id="audit-pct">0%</div>
+      <div class="prog-bar-wrap" style="width:180px;margin:0"><div class="prog-fill" id="audit-bar"></div></div>
+      <button class="btn-sm" onclick="goScreen('s-resultados')" id="btn-ver-res" style="display:none">
+        <i class="bi bi-bar-chart-line"></i> VER RESULTADOS
+      </button>
+    </div>
+    <div class="audit-split">
+      <div class="split-pane">
+        <div class="pane-header"><i class="bi bi-file-text"></i> DOCUMENTO SRS — TRAZABILIDAD
+          <span style="margin-left:auto;color:var(--amber);font-size:.58rem" id="highlight-count"></span></div>
+        <div class="pane-body"><div class="srs-doc" id="srs-viewer"></div></div>
+      </div>
+      <div class="split-pane">
+        <div class="pane-header"><i class="bi bi-display"></i> CAPTURA UI — BOUNDING BOXES
+          <span style="margin-left:auto;font-size:.58rem" id="bbox-count"></span></div>
+        <div class="pane-body">
+          <div class="ui-canvas" id="ui-canvas"></div>
+          <div class="scan-log-panel" style="margin-top:1rem">
+            <div class="log-header"><i class="bi bi-terminal" style="color:var(--sky)"></i> MOTOR DE AUDITORÍA — REGISTRO</div>
+            <div class="log-body" id="audit-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANTALLA 4: RESULTADOS ══ -->
+<div id="s-resultados" class="screen">
+  <div class="results-layout">
+    <div style="display:flex;flex-direction:column;gap:1.25rem">
+      <div class="score-panel">
+        <div class="score-hero">
+          <div class="score-ring-wrap">
+            <svg viewBox="0 0 100 100" width="100" height="100">
+              <circle class="score-track" cx="50" cy="50" r="42"/>
+              <circle class="score-fill" id="score-ring-fill" cx="50" cy="50" r="42"/>
+            </svg>
+            <div class="score-num">
+              <div class="score-big" id="score-big">—</div>
+              <div class="score-lbl">PUNTAJE QA</div>
+            </div>
+          </div>
+          <div class="score-title">AUDITORÍA COMPLETA</div>
+          <div class="score-sub" id="score-sub">Reporte Inside the Lens</div>
+        </div>
+        <div class="score-stats" id="score-stats"></div>
+        <div class="export-btns">
+          <button class="btn-export" id="btn-pdf" onclick="exportarPDF()"><i class="bi bi-file-pdf"></i> DESCARGAR REPORTE PDF</button>
+          <button class="btn-export" onclick="exportarCSV()"><i class="bi bi-file-earmark-spreadsheet"></i> EXPORTAR CASOS XLSX/CSV</button>
+          <button class="btn-export" onclick="exportarJiraLote()"><i class="bi bi-bug"></i> EXPORTAR TICKETS JIRA (LOTE)</button>
+        </div>
+      </div>
+      <div class="score-panel">
+        <div style="background:var(--card);padding:.7rem 1rem;border-bottom:1px solid var(--edge);font-family:var(--mono);font-size:.6rem;color:var(--text-3);letter-spacing:1px">
+          <i class="bi bi-universal-access me-1" style="color:var(--sky)"></i> WCAG 2.1 AA — ACCESIBILIDAD
+        </div>
+        <div id="wcag-summary" style="padding:.8rem"></div>
+      </div>
+    </div>
+    <div class="findings-panel">
+      <div class="findings-toolbar">
+        <span class="findings-title"><i class="bi bi-bug me-1" style="color:var(--sky)"></i>HALLAZGOS — INSIDE THE LENS</span>
+        <div class="filter-pills">
+          <button class="filter-pill active" onclick="filtrar('todos',this)">TODOS</button>
+          <button class="filter-pill" onclick="filtrar('critical',this)">CRÍTICO</button>
+          <button class="filter-pill" onclick="filtrar('high',this)">ALTO</button>
+          <button class="filter-pill" onclick="filtrar('medium',this)">MEDIO</button>
+          <button class="filter-pill" onclick="filtrar('low',this)">BAJO</button>
+        </div>
+      </div>
+      <div class="findings-list" id="findings-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: TICKET JIRA -->
+<div class="modal-bd" id="modal-ticket">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <span class="modal-header-title"><i class="bi bi-ticket-detailed me-2"></i>TICKET DE DEFECTO — LISTO PARA JIRA</span>
+      <button class="modal-close" onclick="cerrarModal('modal-ticket')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body" id="ticket-body"></div>
+    <div class="modal-footer">
+      <button class="btn-sm solid" onclick="copiarTicket()"><i class="bi bi-clipboard2-check"></i> COPIAR PARA JIRA</button>
+      <button class="btn-sm" onclick="cerrarModal('modal-ticket')"><i class="bi bi-x"></i> CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: AUTH -->
+<div class="modal-bd" id="modal-auth">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-header-title"><i class="bi bi-shield-lock me-2"></i>ACCESO AL ESPACIO DE TRABAJO SIDL</span>
+      <button class="modal-close" onclick="cerrarModal('modal-auth')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="auth-tabs-row">
+        <button class="auth-tab-btn active" id="atab-in" onclick="tabAuth('in')">INICIAR SESIÓN</button>
+        <button class="auth-tab-btn" id="atab-reg" onclick="tabAuth('reg')">REGISTRARSE</button>
+      </div>
+      <div id="auth-in">
+        <div class="f-group"><label class="f-label">CORREO ELECTRÓNICO</label><input class="f-input" id="si-email" type="email" placeholder="qa.lider@empresa.com"></div>
+        <div class="f-group"><label class="f-label">CONTRASEÑA</label><input class="f-input" id="si-pass" type="password" placeholder="••••••••"></div>
+        <div class="f-error" id="si-err"></div>
+        <button class="btn-auth" onclick="doLogin()"><i class="bi bi-box-arrow-in-right me-2"></i>ACCEDER</button>
+        <div style="text-align:center;margin-top:.8rem;font-family:var(--mono);font-size:.6rem;color:var(--text-4)">
+          ¿Sin cuenta? <button onclick="tabAuth('reg')" style="background:none;border:none;color:var(--sky);cursor:pointer;font-family:var(--mono);font-size:.6rem">Regístrate →</button>
+        </div>
+      </div>
+      <div id="auth-reg" style="display:none">
+        <div class="f-group"><label class="f-label">NOMBRE COMPLETO</label><input class="f-input" id="rg-name" type="text" placeholder="Ingeniero QA Senior"></div>
+        <div class="f-group"><label class="f-label">CORREO ELECTRÓNICO</label><input class="f-input" id="rg-email" type="email" placeholder="qa.lider@empresa.com"></div>
+        <div class="f-group"><label class="f-label">CONTRASEÑA</label><input class="f-input" id="rg-pass" type="password" placeholder="Mín. 6 caracteres"></div>
+        <div class="f-group"><label class="f-label">CONFIRMAR CONTRASEÑA</label><input class="f-input" id="rg-conf" type="password" placeholder="Repite la contraseña"></div>
+        <div class="f-error" id="rg-err"></div>
+        <button class="btn-auth" onclick="doRegistro()"><i class="bi bi-person-plus me-2"></i>CREAR CUENTA</button>
+        <div style="text-align:center;margin-top:.8rem;font-family:var(--mono);font-size:.6rem;color:var(--text-4)">
+          ¿Ya tienes cuenta? <button onclick="tabAuth('in')" style="background:none;border:none;color:var(--sky);cursor:pointer;font-family:var(--mono);font-size:.6rem">Inicia sesión →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: HISTORIAL -->
+<div class="modal-bd" id="modal-historial">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <span class="modal-header-title"><i class="bi bi-clock-history me-2"></i>HISTORIAL DE AUDITORÍAS</span>
+      <button class="modal-close" onclick="cerrarModal('modal-historial')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body" id="historial-body" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn-sm" onclick="cerrarModal('modal-historial')"><i class="bi bi-x"></i> CERRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-msg" id="loading-msg">PROCESANDO...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-nb" id="toast"><i class="bi bi-check-circle-fill"></i><span id="toast-msg"></span></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+'use strict';
+// ═══════════════════════════════════════════
+// ESTADO GLOBAL
+// ═══════════════════════════════════════════
+const API = '';  // misma origen (FastAPI sirve el HTML)
+let usuarioActual = null;
+let sessionId = null;
+let auditId = null;
+let filasCasos = [];
+let hallazgosData = [];
+let wcagData = [];
+let filtroActivo = 'todos';
+let hallazgosDescartados = new Set();
+let hallazgoTicketActual = null;
+let pasoAlcanzado = 1;
+
+const SRS_DEMO = `ESPECIFICACIÓN DE REQUISITOS DEL SISTEMA
+Documento: SRS-SECUREBANK-AUTH v1.4
+Autor: Equipo de Arquitectura y QA
+Estado: APROBADO
+
+§1  ALCANCE
+Este documento define los requisitos del Módulo de Autenticación de SecureBank.
+
+§3  REQUISITOS DE INTERFAZ
+3.2.1 El botón de acción primario DEBE usar el color corporativo #1565C0.
+3.5.2 El campo de contraseña DEBE incluir un control de visibilidad mostrar/ocultar.
+
+§5  ACCESIBILIDAD
+5.1  TODOS los elementos interactivos DEBEN tener atributos aria-label.
+5.4  TODO texto informativo DEBE lograr contraste mínimo de 4.5:1 (WCAG 2.1 AA).
+
+§8  VERSIONADO
+8.1  El pie de página DEBE mostrar la versión alineada con el release actual (v2.3.0).`;
+
+// ═══════════════════════════════════════════
+// NAVEGACIÓN
+// ═══════════════════════════════════════════
+const PANTALLAS = {'s-ingesta':1,'s-casos':2,'s-visor':3,'s-resultados':4};
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const n = PANTALLAS[id]||1;
+  document.querySelectorAll('.step-item').forEach((el,i)=>{
+    el.classList.remove('active','done');
+    const sn=i+1;
+    if(sn<n)el.classList.add('done');
+    else if(sn===n)el.classList.add('active');
+  });
+  window.scrollTo(0,0);
+}
+function pasoProtegido(s,n){
+  if(n>pasoAlcanzado){toast('Completa el paso actual primero.');return;}
+  goScreen(s);
+}
+
+// ═══════════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════════
+function dzOver(e,id){e.preventDefault();document.getElementById(id).classList.add('over')}
+function dzLeave(id){document.getElementById(id).classList.remove('over')}
+function dzDrop(e,dzId,inpId){
+  e.preventDefault();dzLeave(dzId);
+  const inp=document.getElementById(inpId);
+  Object.defineProperty(inp,'files',{value:e.dataTransfer.files,writable:false});
+  dzArchivo(inp,dzId);
+}
+function dzArchivo(inp,dzId){
+  const f=inp.files[0];if(!f)return;
+  document.getElementById(dzId).classList.add('filled');
+  document.getElementById(dzId).querySelector('.dz-filename').textContent='✓ '+f.name;
+  document.getElementById(dzId==='dz-srs'?'srs-fn':'ui-fn').textContent='✓ '+f.name;
+}
+
+// ═══════════════════════════════════════════
+// PANTALLA 1 → 2: SUBIR ARCHIVOS AL BACKEND
+// ═══════════════════════════════════════════
+function iniciarDemo(){
+  // Simular archivos cargados para demo
+  ['dz-srs','dz-ui'].forEach(id=>{
+    document.getElementById(id).classList.add('filled');
+    document.getElementById(id).querySelector('.dz-filename').textContent=
+      id==='dz-srs'?'✓ srs-securebank-demo.pdf':'✓ captura-login-demo.png';
+  });
+  document.getElementById('srs-fn').textContent='✓ srs-securebank-demo.pdf';
+  document.getElementById('ui-fn').textContent='✓ captura-login-demo.png';
+  // Usar datos demo directamente sin llamar al backend
+  usarCasosDemo();
+}
+
+function usarCasosDemo(){
+  goScreen('s-casos');
+  pasoAlcanzado=Math.max(pasoAlcanzado,2);
+  filasCasos=[
+    {id:'CP-001',prioridad:'critical',nombre:'Cumplimiento del Color del Botón CTA Principal',pre:'Usuario en /login, página completamente cargada',pasos:'1. Inspeccionar el botón CTA principal\n2. Comparar el color computado\n3. Validar contra SRS §3.2.1',esperado:'Color del botón = #1565C0 (Azul Corporativo)',ref:'§3.2.1'},
+    {id:'CP-002',prioridad:'high',nombre:'Relación de Contraste WCAG AA — Texto Informativo',pre:'Página de login renderizada al 100% de zoom',pasos:'1. Seleccionar el elemento de texto informativo\n2. Medir la relación de contraste',esperado:'Relación de contraste ≥ 4.5:1 en todo el texto',ref:'§5.4'},
+    {id:'CP-003',prioridad:'high',nombre:'Toggle de Visibilidad en Campo de Contraseña',pre:'Formulario de login renderizado',pasos:'1. Localizar el campo de contraseña\n2. Verificar el ícono de mostrar/ocultar',esperado:'Toggle presente; input cambia entre password↔text',ref:'§3.5.2'},
+    {id:'CP-004',prioridad:'medium',nombre:'Etiquetas ARIA en Elementos Interactivos',pre:'DOM de la página completamente cargado',pasos:'1. Inspeccionar todos los enlaces y botones\n2. Verificar atributos aria-label',esperado:'Todos los elementos interactivos tienen aria-label',ref:'§5.1'},
+    {id:'CP-005',prioridad:'medium',nombre:'Versión del Pie de Página Coincide con Release',pre:'Aplicación desplegada en entorno objetivo',pasos:'1. Navegar a cualquier página\n2. Leer la cadena de versión',esperado:'El pie de página muestra v2.3.0',ref:'§8.1'},
+    {id:'CP-006',prioridad:'low',nombre:'Orden de Tabulación — Navegación por Teclado',pre:'Página activa, foco de teclado reiniciado',pasos:'1. Presionar Tab desde el campo de correo\n2. Verificar orden del foco',esperado:'Orden de tabulación coincide con especificación §5.2',ref:'§5.2'},
+  ];
+  renderizarTablaCasos();
+  toast('Modo demo — casos de prueba cargados ✓');
+}
+
+async function iniciarAnalisis(){
+  const srsInp = document.getElementById('fi-srs');
+  const uiInp  = document.getElementById('fi-ui');
+
+  if(!srsInp.files.length){
+    toast('Por favor carga el documento SRS primero.');
+    return;
+  }
+
+  mostrarLoading('Enviando archivos al servidor Python...');
+
+  const form = new FormData();
+  form.append('srs', srsInp.files[0]);
+  if(uiInp.files.length) form.append('captura', uiInp.files[0]);
+
+  try {
+    const resp = await fetch(`${API}/api/subir-archivos`, {method:'POST', body:form});
+    if(!resp.ok){
+      const err = await resp.json();
+      throw new Error(err.detail||'Error del servidor');
+    }
+    const data = await resp.json();
+    sessionId = data.session_id;
+    filasCasos = data.casos;
+
+    ocultarLoading();
+    goScreen('s-casos');
+    pasoAlcanzado=Math.max(pasoAlcanzado,2);
+
+    // Mostrar log simulado del proceso
+    const logPanel=document.getElementById('log-analisis');
+    const logEl=document.getElementById('log-analisis-body');
+    logPanel.style.display='block'; logEl.innerHTML='';
+    const msgs=[
+      ['hi','[FastAPI] Archivos recibidos correctamente en el servidor.'],
+      ['','[PyMuPDF] Extrayendo texto del documento SRS...'],
+      ['ok',`[PyMuPDF] ✓ Texto extraído: ${data.texto_srs_preview?.length||0} caracteres.`],
+      ['hi',`[Gemini] Analizando requisitos con IA... (fuente: ${data.fuente})`],
+      ['ok',`[Gemini] ✓ ${filasCasos.length} casos de prueba generados.`],
+      ['warn','[Control] Human-in-the-loop: Revisa y edita antes de continuar.'],
+    ];
+    msgs.forEach(([cls,msg],i)=>{
+      setTimeout(()=>{
+        const l=document.createElement('div');l.className='log-line '+cls;l.textContent=msg;
+        logEl.appendChild(l);logEl.scrollTop=logEl.scrollHeight;
+      },i*400);
+    });
+    setTimeout(()=>{logPanel.style.display='none';renderizarTablaCasos();},msgs.length*400+200);
+
+    const fuente = data.fuente==='gemini'?'Gemini 1.5 Pro':'Simulado (demo)';
+    document.getElementById('tc-fuente').textContent=`// FUENTE: ${fuente.toUpperCase()} — EDITA ANTES DE AUDITAR`;
+
+  } catch(e){
+    ocultarLoading();
+    toastError('Error: '+e.message);
+  }
+}
+
+// ═══════════════════════════════════════════
+// TABLA DE CASOS
+// ═══════════════════════════════════════════
+function renderizarTablaCasos(){
+  const tbody=document.getElementById('tc-body');
+  tbody.innerHTML='';
+  filasCasos.forEach((f,idx)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><span style="font-family:var(--mono);font-size:.7rem;color:var(--sky)">${f.id}</span></td>
+      <td>
+        <span class="prio ${f.prioridad}" id="pd-${idx}">${prioBadge(f.prioridad)}</span>
+        <select style="display:none;background:var(--card);border:1px solid var(--edge);color:var(--text-1);border-radius:4px;font-family:var(--mono);font-size:.65rem;padding:2px 6px;cursor:pointer;outline:none" id="ps-${idx}" onchange="actuPrio(${idx},this.value)">
+          <option value="critical" ${f.prioridad==='critical'?'selected':''}>CRÍTICO</option>
+          <option value="high" ${f.prioridad==='high'?'selected':''}>ALTO</option>
+          <option value="medium" ${f.prioridad==='medium'?'selected':''}>MEDIO</option>
+          <option value="low" ${f.prioridad==='low'?'selected':''}>BAJO</option>
+        </select>
+      </td>
+      <td><div class="cell-edit" contenteditable="true" onblur="saveCell(${idx},'nombre',this)">${f.nombre}</div></td>
+      <td><div class="cell-edit" contenteditable="true" onblur="saveCell(${idx},'pre',this)" style="font-family:var(--mono);font-size:.68rem;color:var(--text-2)">${f.pre}</div></td>
+      <td><div class="cell-edit" contenteditable="true" onblur="saveCell(${idx},'pasos',this)" style="font-family:var(--mono);font-size:.68rem;color:var(--text-2);white-space:pre-line">${f.pasos}</div></td>
+      <td><div class="cell-edit" contenteditable="true" onblur="saveCell(${idx},'esperado',this)">${f.esperado}</div></td>
+      <td><span style="font-family:var(--mono);font-size:.65rem;color:var(--sky)">${f.ref}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="row-btn" onclick="togglePrioEdit(${idx})" title="Cambiar prioridad"><i class="bi bi-flag"></i></button>
+          <button class="row-btn del" onclick="elimFila(${idx})" title="Eliminar"><i class="bi bi-trash"></i></button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('tc-count').textContent=filasCasos.length+' caso'+(filasCasos.length!==1?'s':'');
+}
+function prioBadge(p){const m={critical:'CRÍTICO',high:'ALTO',medium:'MEDIO',low:'BAJO'};return`<i class="bi bi-circle-fill" style="font-size:.4rem"></i>${m[p]||p}`}
+function saveCell(idx,campo,el){filasCasos[idx][campo]=el.textContent.trim()}
+function actuPrio(idx,val){
+  filasCasos[idx].prioridad=val;
+  const sp=document.getElementById('pd-'+idx);sp.className='prio '+val;sp.innerHTML=prioBadge(val);
+  document.getElementById('ps-'+idx).style.display='none';sp.style.display='';
+}
+function togglePrioEdit(idx){
+  document.getElementById('pd-'+idx).style.display='none';
+  const sel=document.getElementById('ps-'+idx);sel.style.display='';sel.focus();
+}
+function elimFila(idx){filasCasos.splice(idx,1);renderizarTablaCasos()}
+function agregarFila(){
+  const n=filasCasos.length+1;
+  filasCasos.push({id:`CP-${String(n).padStart(3,'0')}`,prioridad:'medium',nombre:'Nuevo Caso de Prueba',pre:'Precondición',pasos:'1. Paso uno\n2. Paso dos',esperado:'Resultado esperado',ref:'§—'});
+  renderizarTablaCasos();
+  setTimeout(()=>{const rows=document.querySelectorAll('#tc-body tr');const last=rows[rows.length-1];if(last)last.querySelector('.cell-edit').focus();},50);
+}
+
+// ═══════════════════════════════════════════
+// EXPORTAR CSV — LLAMA AL BACKEND PYTHON
+// ═══════════════════════════════════════════
+async function exportarCSV(){
+  mostrarLoading('Generando CSV en el servidor...');
+  try{
+    const resp=await fetch(`${API}/api/exportar-csv`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({session_id:sessionId||'demo',casos:filasCasos}),
+    });
+    if(!resp.ok)throw new Error('Error al generar CSV');
+    const blob=await resp.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='sidl-casos-de-prueba.csv';a.click();
+    ocultarLoading();
+    toast('CSV exportado correctamente ✓');
+  }catch(e){ocultarLoading();toastError('Error: '+e.message);}
+}
+
+// ═══════════════════════════════════════════
+// PANTALLA 2 → 3: LANZAR AUDITORÍA EN BACKEND
+// ═══════════════════════════════════════════
+async function lanzarAuditoria(){
+  mostrarLoading('Enviando casos de prueba al motor de auditoría Python...');
+  try{
+    const resp=await fetch(`${API}/api/lanzar-auditoria`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({session_id:sessionId||'demo',casos:filasCasos}),
+    });
+    if(!resp.ok)throw new Error((await resp.json()).detail||'Error del servidor');
+    const data=await resp.json();
+    auditId      = data.audit_id;
+    hallazgosData= data.hallazgos;
+    wcagData     = data.wcag;
+
+    ocultarLoading();
+    goScreen('s-visor');
+    pasoAlcanzado=Math.max(pasoAlcanzado,3);
+    construirVisorSRS();
+    construirCanvasUI();
+    ejecutarSecuenciaVisor(data.puntaje);
+  }catch(e){ocultarLoading();toastError('Error: '+e.message);}
+}
+
+// ═══════════════════════════════════════════
+// VISOR DUAL — ANIMACIÓN
+// ═══════════════════════════════════════════
+function construirVisorSRS(){
+  const clausulasVioladas=hallazgosData.map(h=>h.clausula.split('—')[0].trim().replace('§',''));
+  document.getElementById('srs-viewer').innerHTML=SRS_DEMO.split('\n').map(linea=>{
+    const r=clausulasVioladas.some(c=>linea.includes(c));
+    return`<span class="srs-clause ${r?'highlighted':''}">${escHtml(linea)||' '}</span>`;
+  }).join('\n');
+}
+function construirCanvasUI(){
+  document.getElementById('ui-canvas').innerHTML=`
+    <div class="ui-mock-wrap" id="ui-mock">
+      <div style="background:#1a237e;padding:10px 14px;color:#fff;font-size:12px;font-weight:bold;display:flex;justify-content:space-between;font-family:sans-serif"><span>🔐 Portal SecureBank</span><span style="font-size:10px;opacity:.7">v2.1.0</span></div>
+      <div style="padding:14px;font-family:sans-serif">
+        <div style="font-size:10px;color:#555;margin-bottom:3px">CORREO ELECTRÓNICO</div>
+        <input style="width:100%;border:1.5px solid #ccc;border-radius:4px;padding:6px 10px;font-size:12px;margin-bottom:10px;outline:none" placeholder="usuario@empresa.com" readonly>
+        <div style="font-size:10px;color:#555;margin-bottom:3px">CONTRASEÑA</div>
+        <input type="password" style="width:100%;border:1.5px solid #ccc;border-radius:4px;padding:6px 10px;font-size:12px;margin-bottom:10px;outline:none" placeholder="••••••••" readonly>
+        <button style="width:100%;background:#e57373;color:#fff;border:none;padding:9px;border-radius:4px;font-size:12px;font-weight:bold;margin-bottom:10px">INICIAR SESIÓN</button>
+        <div style="font-size:9px;color:#b0b0b0;background:#d0d0d0;padding:4px 6px;border-radius:3px">Texto de baja visibilidad</div>
+        <div style="font-size:10px;color:#777;margin-top:8px">¿Olvidaste tu contraseña? Haz clic aquí</div>
+      </div>
+      <div style="background:#f5f5f5;padding:6px 14px;font-size:9px;color:#aaa;border-top:1px solid #eee;font-family:sans-serif">© 2025 SecureBank — v2.1</div>
+      <div class="scan-line" id="scan-line"></div>
+      <div class="scan-overlay show" id="scan-overlay">
+        <div style="position:relative;width:56px;height:56px">
+          <svg viewBox="0 0 54 54" width="54" height="54" style="transform:rotate(-90deg)">
+            <circle class="ring-track" cx="27" cy="27" r="24"/>
+            <circle class="ring-fill" id="ring-fill" cx="27" cy="27" r="24"/>
+          </svg>
+          <div class="ring-pct" id="ring-pct">0%</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:.6rem;color:var(--sky);letter-spacing:1px">ANALIZANDO...</div>
+      </div>
+      ${hallazgosData.map(h=>`<div class="bbox ${h.bbox.tipo}" id="bbox-${h.id}" style="left:${h.bbox.x};top:${h.bbox.y};width:${h.bbox.w};height:${h.bbox.h}"><div class="bbox-label">${h.bbox.etiqueta}</div></div>`).join('')}
+    </div>`;
+}
+function ejecutarSecuenciaVisor(puntaje){
+  const logEl=document.getElementById('audit-log');
+  logEl.innerHTML='';
+  const barEl=document.getElementById('audit-bar');
+  const pctEl=document.getElementById('audit-pct');
+  document.getElementById('scan-line').classList.add('running');
+  let prog=0;
+  const iv=setInterval(()=>{prog=Math.min(prog+0.9,100);barEl.style.width=prog+'%';pctEl.textContent=Math.round(prog)+'%';
+    const rf=document.getElementById('ring-fill');if(rf){rf.style.strokeDashoffset=151-(151*prog/100);document.getElementById('ring-pct').textContent=Math.round(prog)+'%';}
+    if(prog>=100)clearInterval(iv);
+  },70);
+  const msgs=[
+    [0,   'hi',   '[FastAPI] Auditoría recibida del cliente. Iniciando pipeline de análisis...'],
+    [600, '',     '[PyMuPDF] Preprocesando captura de pantalla de la UI...'],
+    [1200,'ok',   '[Gemini] ✓ Elementos UI extraídos: 9 componentes detectados.'],
+    [1700,'hi',   '[Comparador] Referenciando casos de prueba contra elementos UI...'],
+    [2200,'warn', `[Resultado] ⚠ ${hallazgosData.filter(h=>h.severidad==='critical').length} hallazgos críticos detectados.`],
+    [2800,'ok',   '[WCAG] ✓ Análisis de accesibilidad WCAG 2.1 AA completado.'],
+    [3400,'ok',   `[Reporte] ✓ Puntaje QA calculado: ${puntaje}/100`],
+    [3800,'hi',   '[SiDL] Auditoría completa. Abriendo panel de resultados...'],
+  ];
+  msgs.forEach(([t,cls,msg])=>{
+    setTimeout(()=>{const l=document.createElement('div');l.className='log-line '+cls;l.textContent=msg;logEl.appendChild(l);logEl.scrollTop=logEl.scrollHeight;},t);
+  });
+  hallazgosData.forEach((h,i)=>{
+    setTimeout(()=>{
+      const el=document.getElementById('bbox-'+h.id);if(el)el.classList.add('show');
+      document.querySelectorAll('.srs-clause').forEach(cl=>{
+        if(cl.textContent.includes(h.clausula.split('—')[0].trim().replace('§','')))cl.classList.add('highlighted');
+      });
+      document.getElementById('highlight-count').textContent=document.querySelectorAll('.srs-clause.highlighted').length+' cláusulas violadas';
+      document.getElementById('bbox-count').textContent=(i+1)+' anomalías detectadas';
+    },2500+i*600);
+  });
+  setTimeout(()=>{
+    document.getElementById('scan-line').classList.remove('running');
+    const ov=document.getElementById('scan-overlay');if(ov)ov.classList.remove('show');
+    document.getElementById('btn-ver-res').style.display='';
+    renderizarResultados(puntaje);
+    pasoAlcanzado=Math.max(pasoAlcanzado,4);
+    toast('Auditoría completa — '+hallazgosData.length+' hallazgos detectados.');
+  },4500);
+}
+
+// ═══════════════════════════════════════════
+// PANTALLA 4: RESULTADOS
+// ═══════════════════════════════════════════
+function renderizarResultados(puntaje){
+  document.getElementById('score-big').textContent=puntaje;
+  document.getElementById('score-sub').textContent='Generado el '+new Date().toLocaleString('es-MX');
+  const fill=document.getElementById('score-ring-fill');
+  fill.style.strokeDashoffset=263-(263*puntaje/100);
+  fill.style.stroke=puntaje>=80?'#10b981':puntaje>=55?'#f59e0b':'#ef4444';
+  const crit=hallazgosData.filter(h=>h.severidad==='critical').length;
+  const alto=hallazgosData.filter(h=>h.severidad==='high').length;
+  const med =hallazgosData.filter(h=>h.severidad==='medium').length;
+  const bajo=hallazgosData.filter(h=>h.severidad==='low').length;
+  document.getElementById('score-stats').innerHTML=`
+    <div class="score-stat"><div class="score-stat-n" style="color:var(--red)">${crit}</div><div class="score-stat-l">CRÍTICO</div></div>
+    <div class="score-stat"><div class="score-stat-n" style="color:var(--amber)">${alto}</div><div class="score-stat-l">ALTO</div></div>
+    <div class="score-stat"><div class="score-stat-n" style="color:var(--sky)">${med}</div><div class="score-stat-l">MEDIO</div></div>
+    <div class="score-stat"><div class="score-stat-n" style="color:var(--green)">${bajo}</div><div class="score-stat-l">BAJO</div></div>`;
+  document.getElementById('wcag-summary').innerHTML=(wcagData||[]).map(w=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:.4rem 0;border-bottom:1px solid var(--edge);font-size:.78rem">
+      <span class="prio ${w.estado==='pass'?'low':w.estado==='fail'?'critical':'medium'}" style="min-width:56px;justify-content:center">${w.estado==='pass'?'PASA':w.estado==='fail'?'FALLA':'AVISO'}</span>
+      <span style="font-family:var(--mono);font-size:.65rem;color:var(--text-3);min-width:36px">${w.id}</span>
+      <span>${w.nombre}</span>
+      <span class="prio medium" style="margin-left:auto;font-size:.52rem">${w.nivel}</span>
+    </div>`).join('');
+  renderizarHallazgos('todos');
+}
+function renderizarHallazgos(filtro){
+  filtroActivo=filtro;
+  const list=document.getElementById('findings-list');
+  const mostrados=filtro==='todos'?hallazgosData:hallazgosData.filter(h=>h.severidad===filtro);
+  const etiqSev={critical:'CRÍTICO',high:'ALTO',medium:'MEDIO',low:'BAJO'};
+  list.innerHTML=mostrados.map(h=>{
+    const desc=hallazgosDescartados.has(h.id);
+    return`<div class="finding ${desc?'dismissed':''}" id="fc-${h.id}" onclick="toggleH('${h.id}')">
+      <div class="finding-top">
+        <span class="finding-id">${h.id}</span>
+        <span class="prio ${h.severidad}">${etiqSev[h.severidad]||h.severidad.toUpperCase()}</span>
+        <span class="finding-name">${h.titulo}</span>
+        <i class="bi bi-chevron-right finding-chevron"></i>
+      </div>
+      <div class="finding-detail">
+        <div class="clause-link"><i class="bi bi-link-45deg me-1"></i>${h.clausula}</div>
+        <div class="finding-desc">${h.desc}</div>
+        <div class="finding-desc" style="font-family:var(--mono);font-size:.68rem">
+          <span style="color:var(--green)">ESPERADO: </span>${h.esperado}<br>
+          <span style="color:var(--red)">OBTENIDO: </span>${h.obtenido}
+        </div>
+        <div class="technique-row">${(h.tecnicas||[]).map(t=>`<span class="tech-badge"><i class="bi bi-cpu-fill"></i>${t}</span>`).join('')}</div>
+        <div class="finding-actions">
+          <button class="fa-btn" onclick="abrirTicket(event,'${h.id}')"><i class="bi bi-ticket-detailed"></i> TICKET JIRA</button>
+          <button class="fa-btn" onclick="descartar(event,'${h.id}')">
+            <i class="bi bi-${desc?'arrow-counterclockwise':'slash-circle'}"></i> ${desc?'RESTAURAR':'FALSO POSITIVO'}
+          </button>
+          <span style="font-family:var(--mono);font-size:.58rem;color:var(--text-3);margin-left:auto">${h.refCaso}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('')||`<div style="padding:2rem;text-align:center;font-family:var(--mono);font-size:.7rem;color:var(--text-4)">Sin hallazgos para este filtro.</div>`;
+}
+function filtrar(f,btn){document.querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('active'));btn.classList.add('active');renderizarHallazgos(f);}
+function toggleH(id){document.getElementById('fc-'+id).classList.toggle('expanded')}
+function descartar(e,id){
+  e.stopPropagation();
+  hallazgosDescartados.has(id)?hallazgosDescartados.delete(id):hallazgosDescartados.add(id);
+  renderizarHallazgos(filtroActivo);
+  const n=Math.min(parseInt(document.getElementById('score-big').textContent||'58')+8,100);
+  document.getElementById('score-big').textContent=n;
+  toast(hallazgosDescartados.has(id)?id+' marcado como falso positivo.':id+' restaurado.');
+}
+
+// ═══════════════════════════════════════════
+// EXPORTAR PDF — LLAMA AL BACKEND PYTHON (ReportLab)
+// ═══════════════════════════════════════════
+async function exportarPDF(){
+  if(!auditId){toast('Primero ejecuta una auditoría para generar el PDF.');return;}
+  const btn=document.getElementById('btn-pdf');
+  btn.disabled=true;btn.innerHTML='<i class="bi bi-hourglass-split"></i> GENERANDO PDF...';
+  try{
+    // El backend genera el PDF con ReportLab y lo devuelve como descarga
+    const resp=await fetch(`${API}/api/exportar-pdf/${auditId}`);
+    if(!resp.ok)throw new Error((await resp.json()).detail||'Error al generar PDF');
+    const blob=await resp.blob();
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='SiDL-Reporte-Auditoria-QA.pdf';a.click();
+    toast('Reporte PDF descargado correctamente ✓');
+  }catch(e){toastError('Error al generar PDF: '+e.message+'. Asegúrate de que ReportLab esté instalado.');}
+  finally{btn.disabled=false;btn.innerHTML='<i class="bi bi-file-pdf"></i> DESCARGAR REPORTE PDF';}
+}
+
+// ═══════════════════════════════════════════
+// TICKET JIRA
+// ═══════════════════════════════════════════
+function abrirTicket(e,id){
+  e.stopPropagation();
+  const h=hallazgosData.find(x=>x.id===id);if(!h)return;
+  hallazgoTicketActual=h;
+  const etiqSev={critical:'CRÍTICO',high:'ALTO',medium:'MEDIO',low:'BAJO'};
+  document.getElementById('ticket-body').innerHTML=`
+    <div class="t-field"><div class="t-label">RESUMEN</div><div class="t-val">[${h.id}][${etiqSev[h.severidad]}] ${h.titulo}</div></div>
+    <div class="t-field"><div class="t-label">REQUISITO VINCULADO</div><div class="t-val">${h.clausula}</div></div>
+    <div class="t-field"><div class="t-label">DESCRIPCIÓN</div><div class="t-val">${h.desc}</div></div>
+    <div class="t-field"><div class="t-label">TÉCNICAS DE DETECCIÓN</div><div class="t-val">${(h.tecnicas||[]).join(' · ')}</div></div>
+    <div class="t-field"><div class="t-label">PASOS PARA REPRODUCIR</div><div class="t-val">1. Navegar a la página objetivo.\n2. Inspeccionar el elemento referenciado en ${h.id}.\n3. Comparar con requisito SRS ${h.clausula.split('—')[0].trim()}.\n4. Documentar la discrepancia visual.</div></div>
+    <div class="t-field"><div class="t-label">RESULTADO ESPERADO</div><div class="t-val">${h.esperado}</div></div>
+    <div class="t-field"><div class="t-label">RESULTADO ACTUAL</div><div class="t-val">${h.obtenido}</div></div>
+    <div class="t-field"><div class="t-label">SEVERIDAD / PRIORIDAD</div><div class="t-val">${etiqSev[h.severidad]} / ${h.severidad==='critical'||h.severidad==='high'?'P1':'P2'}</div></div>
+    <div class="t-field"><div class="t-label">GENERADO POR</div><div class="t-val">SiDL v1.0 — FastAPI + Gemini 1.5 Pro — ${new Date().toISOString()}</div></div>`;
+  abrirModal('modal-ticket');
+}
+function copiarTicket(){
+  if(!hallazgoTicketActual)return;
+  const h=hallazgoTicketActual;
+  const etiqSev={critical:'CRÍTICO',high:'ALTO',medium:'MEDIO',low:'BAJO'};
+  const t=`[${h.id}][${etiqSev[h.severidad]}] ${h.titulo}\n\nCláusula: ${h.clausula}\nEsperado: ${h.esperado}\nObtenido: ${h.obtenido}\nTécnicas: ${(h.tecnicas||[]).join(', ')}\n\nGenerado por SiDL — Smart Interface & Documentation Lens`;
+  navigator.clipboard.writeText(t).then(()=>{toast('Ticket copiado para Jira ✓');cerrarModal('modal-ticket');});
+}
+function exportarJiraLote(){
+  const etiqSev={critical:'CRÍTICO',high:'ALTO',medium:'MEDIO',low:'BAJO'};
+  const out=hallazgosData.map(h=>`[${h.id}][${etiqSev[h.severidad]}] ${h.titulo}\nCláusula: ${h.clausula}\nEsperado: ${h.esperado}\nObtenido: ${h.obtenido}\n`).join('\n---\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'text/plain'}));a.download='sidl-jira-lote.txt';a.click();
+  toast('Exportación masiva Jira descargada ✓');
+}
+
+// ═══════════════════════════════════════════
+// AUTH — LLAMA AL BACKEND PYTHON
+// ═══════════════════════════════════════════
+function tabAuth(t){
+  document.getElementById('auth-in').style.display=t==='in'?'block':'none';
+  document.getElementById('auth-reg').style.display=t==='reg'?'block':'none';
+  document.getElementById('atab-in').classList.toggle('active',t==='in');
+  document.getElementById('atab-reg').classList.toggle('active',t==='reg');
+  document.getElementById('si-err').style.display='none';
+  document.getElementById('rg-err').style.display='none';
+}
+async function doLogin(){
+  const email=document.getElementById('si-email').value.trim().toLowerCase();
+  const contrasena=document.getElementById('si-pass').value;
+  const err=document.getElementById('si-err');err.style.display='none';
+  if(!email||!contrasena){err.textContent='Por favor completa todos los campos.';err.style.display='block';return;}
+  try{
+    const resp=await fetch(`${API}/api/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,contrasena})});
+    if(!resp.ok){const e=await resp.json();err.textContent=e.detail;err.style.display='block';return;}
+    const data=await resp.json();
+    usuarioActual={nombre:data.nombre,email:data.email,numAuditorias:data.num_auditorias};
+    cerrarModal('modal-auth');actualizarNavbar();toast(`¡Bienvenido, ${data.nombre.split(' ')[0]}! ✓`);
+  }catch(e){err.textContent='Error de conexión con el servidor.';err.style.display='block';}
+}
+async function doRegistro(){
+  const nombre=document.getElementById('rg-name').value.trim();
+  const email=document.getElementById('rg-email').value.trim().toLowerCase();
+  const contrasena=document.getElementById('rg-pass').value;
+  const confirmar=document.getElementById('rg-conf').value;
+  const err=document.getElementById('rg-err');err.style.display='none';
+  try{
+    const resp=await fetch(`${API}/api/registro`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nombre,email,contrasena,confirmar})});
+    if(!resp.ok){const e=await resp.json();err.textContent=e.detail;err.style.display='block';return;}
+    const data=await resp.json();
+    usuarioActual={nombre:data.nombre,email:data.email,numAuditorias:0};
+    cerrarModal('modal-auth');actualizarNavbar();toast(`¡Cuenta creada! Bienvenido, ${data.nombre.split(' ')[0]} ✓`);
+  }catch(e){err.textContent='Error de conexión con el servidor.';err.style.display='block';}
+}
+function cerrarSesion(){usuarioActual=null;actualizarNavbar();toast('Sesión cerrada correctamente.');}
+function abrirAuth(){abrirModal('modal-auth');tabAuth('in');}
+function actualizarNavbar(){
+  const area=document.getElementById('nb-auth-area');
+  area.style.cssText='display:flex;align-items:center;gap:6px;flex-wrap:nowrap;flex-shrink:0';
+  if(usuarioActual){
+    const ini=usuarioActual.nombre.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    area.innerHTML=`
+      <div class="user-chip-nb" onclick="abrirHistorial()">
+        <div class="u-avatar">${ini}</div>
+        ${usuarioActual.nombre.split(' ')[0].toUpperCase()}
+        <span class="hist-badge">${usuarioActual.numAuditorias}</span>
+      </div>
+      <button class="topbar-btn" onclick="abrirHistorial()"><i class="bi bi-clock-history"></i> HISTORIAL</button>
+      <button class="topbar-btn" onclick="cerrarSesion()" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i></button>`;
+  }else{
+    area.innerHTML=`<button class="topbar-btn" onclick="abrirAuth()"><i class="bi bi-person"></i> INICIAR SESIÓN</button>`;
+  }
+}
+
+// ═══════════════════════════════════════════
+// HISTORIAL — LLAMA AL BACKEND PYTHON
+// ═══════════════════════════════════════════
+async function abrirHistorial(){
+  if(!usuarioActual){abrirAuth();return;}
+  abrirModal('modal-historial');
+  document.getElementById('historial-body').innerHTML=`<div style="text-align:center;padding:2rem;font-family:var(--mono);font-size:.7rem;color:var(--text-3)"><div class="spinner" style="margin:0 auto 1rem"></div>Cargando historial...</div>`;
+  try{
+    const resp=await fetch(`${API}/api/historial/${encodeURIComponent(usuarioActual.email)}`);
+    const data=await resp.json();
+    renderizarHistorial(data.auditorias||[]);
+  }catch(e){document.getElementById('historial-body').innerHTML=`<div style="text-align:center;padding:2rem;color:var(--red);font-family:var(--mono);font-size:.7rem">Error al cargar historial.</div>`;}
+}
+function renderizarHistorial(lista){
+  const el=document.getElementById('historial-body');
+  if(!lista.length){el.innerHTML=`<div class="hist-empty"><i class="bi bi-inbox"></i>Aún no hay auditorías guardadas.<br>Ejecuta una auditoría para iniciar tu historial.</div>`;return;}
+  el.innerHTML=`<div style="font-family:var(--mono);font-size:.6rem;color:var(--text-3);margin-bottom:1rem">${lista.length} AUDITORÍA${lista.length!==1?'S':''}</div>`+
+    lista.map(a=>{
+      const col=a.puntaje>=80?'var(--green)':a.puntaje>=55?'var(--amber)':'var(--red)';
+      return`<div class="hist-item">
+        <div class="hist-top">
+          <div class="hist-score-chip" style="color:${col}">${a.puntaje}</div>
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:.82rem">${a.archivo_srs||'—'}</div>
+            <div style="font-family:var(--mono);font-size:.6rem;color:var(--text-3);margin-top:2px"><i class="bi bi-image me-1" style="color:var(--sky)"></i>${a.archivo_ui||'—'}</div>
+          </div>
+          <div style="font-family:var(--mono);font-size:.6rem;color:var(--text-3);text-align:right">${a.fecha||'—'}</div>
+        </div>
+        <div class="hist-bottom">
+          <span class="prio critical" style="font-size:.55rem">${a.critico||0} CRÍT.</span>
+          <span class="prio high" style="font-size:.55rem">${a.alto||0} ALTO</span>
+          <span class="prio medium" style="font-size:.55rem">${a.medio||0} MED.</span>
+          <span class="prio low" style="font-size:.55rem">${a.bajo||0} BAJO</span>
+          <span style="font-family:var(--mono);font-size:.58rem;color:var(--text-4);margin-left:auto">${a.id?.substring(0,8)||''}</span>
+          <button class="row-btn del" onclick="eliminarAudit('${a.id}')" title="Eliminar"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>`;
+    }).join('');
+}
+async function eliminarAudit(id){
+  await fetch(`${API}/api/historial/${id}`,{method:'DELETE'});
+  abrirHistorial();toast('Auditoría eliminada ✓');
+}
+
+// ═══════════════════════════════════════════
+// UTILIDADES
+// ═══════════════════════════════════════════
+function abrirModal(id){document.getElementById(id).classList.add('show')}
+function cerrarModal(id){document.getElementById(id).classList.remove('show')}
+document.querySelectorAll('.modal-bd').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('show')})});
+function toast(msg,tipo=''){
+  const t=document.getElementById('toast');
+  t.className='toast-nb'+(tipo?' '+tipo:'');
+  t.innerHTML=`<i class="bi bi-${tipo==='error'?'exclamation-circle-fill':'check-circle-fill'}"></i><span>${msg}</span>`;
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);
+}
+function toastError(msg){toast(msg,'error');}
+function mostrarLoading(msg='Procesando...'){
+  document.getElementById('loading-msg').textContent=msg;
+  document.getElementById('loading').classList.add('show');
+}
+function ocultarLoading(){document.getElementById('loading').classList.remove('show')}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+actualizarNavbar();
+</script>
+</body>
+</html>
