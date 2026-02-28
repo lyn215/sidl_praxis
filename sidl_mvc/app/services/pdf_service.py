@@ -95,7 +95,7 @@ def generar_pdf(auditoria: dict, ruta_salida: Path) -> Path:
         [Paragraph("Documento SRS:",       e_ik), Paragraph(auditoria.get("archivo_srs", "—"), e_iv)],
         [Paragraph("Captura de Pantalla:", e_ik), Paragraph(auditoria.get("archivo_ui",  "—"), e_iv)],
         [Paragraph("Fecha de Generación:", e_ik), Paragraph(auditoria.get("fecha", datetime.now().strftime("%d/%m/%Y %H:%M")), e_iv)],
-        [Paragraph("Motor de Análisis:",   e_ik), Paragraph(f"Gemini 1.5 Pro + LangChain + PyMuPDF (fuente: {fuente})", e_iv)],
+        [Paragraph("Motor de Análisis:",   e_ik), Paragraph(f"Groq + HuggingFace Qwen (fuente: {fuente})", e_iv)],
         [Paragraph("ID de Auditoría:",     e_ik), Paragraph(auditoria.get("id", "—"), e_iv)],
     ]
     t_info = Table(info_rows, colWidths=[45*mm, 135*mm])

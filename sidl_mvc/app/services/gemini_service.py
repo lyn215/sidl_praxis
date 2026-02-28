@@ -1,6 +1,6 @@
 """
-SERVICE — Cloud AI Service (Gemini/Groq/Hugging Face)
-Integración con Gemini, Groq o Hugging Face según variables de entorno.
+SERVICE — Cloud AI Service (Qwen/Groq)
+Integración con Groq (QA casos de prueba) y Hugging Face Qwen (auditoría visual).
 """
 
 import json
@@ -18,33 +18,22 @@ from PIL import Image
 load_dotenv()
 
 # ─── Variables de entorno de proveedores IA ───────────────────────────────────
-_raw_groq_api_key = os.getenv("GROQ_API_KEY", "").strip()
-_raw_gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
-_raw_huggingface_api_key = os.getenv("HUGGINGFACE_API_KEY", "").strip()
-
-# Compatibilidad: si guardaron por error una key de Gemini en GROQ_API_KEY (suele empezar con AIza)
-GEMINI_API_KEY = _raw_gemini_api_key or (_raw_groq_api_key if _raw_groq_api_key.startswith("AIza") else "")
-GROQ_API_KEY = _raw_groq_api_key if _raw_groq_api_key and not _raw_groq_api_key.startswith("AIza") else ""
-HUGGINGFACE_API_KEY = _raw_huggingface_api_key
-
-AI_PROVIDER = os.getenv("AI_PROVIDER", os.getenv("IA_PROVIDER", "auto")).strip().lower()
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "").strip()
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL_TEXT = os.getenv("GROQ_MODEL_TEXT", "meta-llama/llama-4-scout-17b-16e-instruct")
 GROQ_MODEL_VISION = os.getenv("GROQ_MODEL_VISION", GROQ_MODEL_TEXT)
 
-GEMINI_MODEL_TEXT = os.getenv("GEMINI_MODEL_TEXT", "gemini-2.0-flash")
-GEMINI_MODEL_VISION = os.getenv("GEMINI_MODEL_VISION", "gemini-2.0-flash")
-
-HUGGINGFACE_MODEL_TEXT = os.getenv("HUGGINGFACE_MODEL_TEXT", "Qwen/Qwen2.5-VL-7B-Instruct")
-HUGGINGFACE_MODEL_VISION = os.getenv("HUGGINGFACE_MODEL_VISION", "Qwen/Qwen2.5-VL-7B-Instruct")
+HUGGINGFACE_MODEL_TEXT = os.getenv("HUGGINGFACE_MODEL_TEXT", "Qwen/Qwen3.5-35B-A3B:novita")
+HUGGINGFACE_MODEL_VISION = os.getenv("HUGGINGFACE_MODEL_VISION", "Qwen/Qwen3.5-35B-A3B:novita")
 HUGGINGFACE_URL = "https://router.huggingface.co/v1/chat/completions"
 
 # ─── Routing fijo por tarea (para reducir sobrecarga en Qwen) ─────────────────
 CASOS_PROVIDER = "groq"
 CASOS_MODEL = "llama-3.1-8b-instant"
 AUDITORIA_PROVIDER = "huggingface"
-AUDITORIA_MODEL = "Qwen/Qwen2.5-VL-7B-Instruct"
+AUDITORIA_MODEL = "Qwen/Qwen3.5-35B-A3B:novita"
 
 # ─── Prompt para generar Casos de Prueba desde SRS ───────────────────────────
 PROMPT_CASOS = """
@@ -152,7 +141,7 @@ REGLAS DE FORMATO (CRÍTICO):
 4. El campo "refCaso" debe ser el ID del caso ("id") de los Casos de prueba (ej. CP-001).
 5. El campo "bbox" debe usar porcentajes relativos a la imagen (ejemplo. "x": "10%", "y": "20%", "w": "30%", "h": "15%") para marcar dónde está el hallazgo.
 6. El campo "tecnicas" debe ser una lista de técnicas usadas para detectar el hallazgo (ej. ["Inspección visual", "Comparación de colores"]).
-7. El campo "wcag" debe incluir al menos el contraste (1.4.3) con su estado (pass/fail/warn) y nota.
+7. El campo "wcag" debe incluir la id del lineamiento con su estado (pass/fail/warn) y nota. Se deben incluir al menos 4 criterios WCAG relacionados con los hallazgos encontrados.
 8. El campo "clausula" debe referenciar la sección "ref" del caso de prueba para facilitar la trazabilidad.
 
 --------------------------------
@@ -189,7 +178,7 @@ FORMATO JSON A SEGUIR:
     }}
   ],
   "wcag": [
-    {{"id": "1.4.3", "nombre": "Contraste", "nivel": "AA", "estado": "", "nota": ""}}
+    {{"id": "(id del lineamiento)", "nombre": "(nombre del lineamiento)", "nivel": "(nivel del lineamiento)", "estado": "(pass/fail/warn)", "nota": "(nota relevante sobre el lineamiento)"}}
   ],
   "puntaje": (puntuaje dado el número y severidad de hallazgos, entre 0 y 100, donde 100 es perfecto y 0 es inaceptable),
   "resumen": "(Resumen detallado de los hallazgos.)"
@@ -197,10 +186,6 @@ FORMATO JSON A SEGUIR:
 """
 
 def _proveedor_activo() -> str:
-    if AI_PROVIDER in {"gemini", "groq", "huggingface"}:
-        return AI_PROVIDER
-    if GEMINI_API_KEY:
-        return "gemini"
     if GROQ_API_KEY:
         return "groq"
     if HUGGINGFACE_API_KEY:
@@ -208,12 +193,10 @@ def _proveedor_activo() -> str:
     return "none"
 
 def _hay_proveedor_configurado() -> bool:
-    return _proveedor_activo() in {"gemini", "groq", "huggingface"}
+    return _proveedor_activo() in {"groq", "huggingface"}
 
 def _fuente_activa() -> str:
     provider = _proveedor_activo()
-    if provider == "gemini":
-        return "gemini"
     if provider == "groq":
         return "groq"
     if provider == "huggingface":
@@ -221,19 +204,8 @@ def _fuente_activa() -> str:
     return "fallback"
 
 def _extraer_texto_respuesta(provider: str, body: dict) -> str:
-    if provider == "groq" or provider == "huggingface":
-        return body["choices"][0]["message"]["content"]
-
-    candidates = body.get("candidates", [])
-    if not candidates:
-        raise ValueError("Gemini no devolvió candidates")
-
-    parts = candidates[0].get("content", {}).get("parts", [])
-    textos = [p.get("text", "") for p in parts if isinstance(p, dict) and p.get("text")]
-    contenido = "\n".join(textos).strip()
-    if not contenido:
-        raise ValueError("Gemini devolvió respuesta vacía")
-    return contenido
+    # Groq y HuggingFace usan formato OpenAI-compatible
+    return body["choices"][0]["message"]["content"]
 
 def _llamar_modelo(
     prompt: str,
@@ -245,7 +217,7 @@ def _llamar_modelo(
 ) -> str:
     provider = provider_override or _proveedor_activo()
     if provider == "none":
-        raise ValueError("No hay proveedor IA configurado. Define GEMINI_API_KEY, GROQ_API_KEY o HUGGINGFACE_API_KEY")
+        raise ValueError("No hay proveedor IA configurado. Define GROQ_API_KEY o HUGGINGFACE_API_KEY")
 
     es_vision = bool(imagen_b64)
 
@@ -309,33 +281,6 @@ def _llamar_modelo(
             print(f"\n❌ HUGGINGFACE RECHAZÓ LA PETICIÓN ({contexto}): {response.text}\n")
         response.raise_for_status()
         return _extraer_texto_respuesta("huggingface", response.json())
-
-    model = model_override or (GEMINI_MODEL_VISION if es_vision else GEMINI_MODEL_TEXT)
-    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
-    headers = {"Content-Type": "application/json"}
-
-    parts = [{"text": prompt}]
-    if es_vision:
-        parts.append({
-            "inline_data": {
-                "mime_type": "image/jpeg",
-                "data": imagen_b64
-            }
-        })
-
-    payload = {
-        "contents": [{"parts": parts}],
-        "generationConfig": {
-            "temperature": 0.1,
-            "responseMimeType": "application/json"
-        }
-    }
-
-    response = requests.post(gemini_url, headers=headers, json=payload, timeout=timeout)
-    if not response.ok:
-        print(f"\n❌ GEMINI RECHAZÓ LA PETICIÓN ({contexto}): {response.text}\n")
-    response.raise_for_status()
-    return _extraer_texto_respuesta("gemini", response.json())
 
 def _limpiar_json(texto: str) -> str:
     """Extrae JSON de un texto que puede contener markdown o caracteres extra."""

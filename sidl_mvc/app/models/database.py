@@ -72,7 +72,7 @@ def init_db():
             altos           INTEGER NOT NULL DEFAULT 0,
             medios          INTEGER NOT NULL DEFAULT 0,
             bajos           INTEGER NOT NULL DEFAULT 0,
-            fuente_analisis TEXT NOT NULL DEFAULT 'gemini',
+            fuente_analisis TEXT NOT NULL DEFAULT 'groq',
             fecha           TEXT NOT NULL,
             FOREIGN KEY (sesion_id)  REFERENCES sesiones_archivo(id),
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id)

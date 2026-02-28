@@ -1,5 +1,5 @@
 # SiDL MVC v2.0 — Smart Interface & Documentation Lens
-### Plataforma de Auditoría QA — Arquitectura MVC | FastAPI + SQLite + Gemini 1.5 Pro
+### Plataforma de Auditoría QA — Arquitectura MVC | FastAPI + SQLite + Groq + Qwen
 
 ---
 
@@ -26,8 +26,8 @@ sidl_mvc/
 │   │   └── exportar_controller.py   ← Rutas /api/exportar/* (pdf, csv)
 │   │
 │   ├── services/                    ← Lógica de negocio (servicios)
-│   │   ├── config_service.py        ← Lee .env, expone GEMINI_API_KEY
-│   │   ├── gemini_service.py        ← Integración real Gemini 1.5 Pro Vision
+│   │   ├── config_service.py        ← Lee .env, expone API keys
+│   │   ├── gemini_service.py        ← Integración Groq + Hugging Face Qwen
 │   │   ├── srs_service.py           ← Extracción de texto PDF/DOCX/TXT
 │   │   └── pdf_service.py           ← Generación de PDF con ReportLab
 │   │
@@ -56,35 +56,23 @@ sidl_mvc/
 pip install -r requirements.txt
 ```
 
-### 2. Configurar Proveedor IA (para análisis REAL)
-Elige **uno** de los tres proveedores disponibles y configura su API Key en `.env`:
+### 2. Configurar Proveedores IA (para análisis REAL)
+El sistema requiere dos proveedores IA:
+- **Groq**: Para generación de casos de prueba desde SRS (llama-3.1-8b-instant)
+- **Hugging Face**: Para auditoría visual con Qwen (Qwen2.5-VL-7B-Instruct)
 
-#### Opción A: Google Gemini (recomendado)
 ```bash
 # Copiar plantilla
 cp .env.example .env
 
 # Editar .env
-GEMINI_API_KEY=tu_api_key_aqui
-AI_PROVIDER=gemini
+GROQ_API_KEY=tu_api_key_groq_aqui
+HUGGINGFACE_API_KEY=tu_api_key_huggingface_aqui
 ```
-> 🔑 Obtén tu API Key gratis en: https://aistudio.google.com/app/apikey
 
-#### Opción B: Groq (más rápido, gratis)
-```bash
-GROQ_API_KEY=tu_api_key_aqui
-AI_PROVIDER=groq
-```
-> 🔑 Obtén tu API Key en: https://console.groq.com/keys
-
-#### Opción C: Hugging Face (Qwen2.5-VL-7B)
-```bash
-HUGGINGFACE_API_KEY=tu_api_key_aqui
-AI_PROVIDER=huggingface
-```
-> 🔑 Obtén tu API Key en: https://huggingface.co/settings/tokens
-
-Si no configuras `AI_PROVIDER`, el sistema elegirá automáticamente el primero disponible.
+**Obtener API Keys:**
+- 🔑 **Groq**: https://console.groq.com/keys (gratis, ultrarrápido)
+- 🔑 **Hugging Face**: https://huggingface.co/settings/tokens (gratis con límites)
 
 ### 3. Ejecutar el servidor
 ```bash
@@ -168,30 +156,26 @@ Tablas creadas automáticamente:
 
 ## ✅ Qué cambiar para Producción 100% Real
 
-### 1. Configurar Proveedor IA (Obligatorio)
-Sin esto, la app usa datos de demostración. Elige **uno** de los 3 proveedores:
-
-**Gemini (Google)**
-- Configura `GEMINI_API_KEY` en `.env`
-- Gratis hasta 1M de tokens/mes
-- Mejor relación costo-beneficio para texto + visión
-- 🔗 https://aistudio.google.com/app/apikey
+### 1. Configurar Proveedores IA (Obligatorio)
+Sin esto, la app usa datos de demostración. Se requieren ambos:
 
 **Groq (Llama 3.1)**
 - Configura `GROQ_API_KEY` en `.env`
-- Gratis y ultrarrápido (inferencia <1s)
-- Perfecto para análisis bajo demanda
+- Usado para: Generación de casos de prueba desde SRS
+- Modelo: `llama-3.1-8b-instant` (ultrarrápido)
+- Gratis y sin límites de tokens
 - 🔗 https://console.groq.com/keys
 
-**Hugging Face (Qwen2.5-VL-7B)**
+**Hugging Face (Qwen2.5-VL-7B-Instruct)**
 - Configura `HUGGINGFACE_API_KEY` en `.env`
-- Modelos open-source alojados
-- Buena opción para privacidad + visión multimodal
+- Usado para: Análisis visual y auditoría con IA Vision
+- Modelo: `Qwen/Qwen2.5-VL-7B-Instruct` (multimodal)
+- Modelos open-source, buena privacidad
 - 🔗 https://huggingface.co/settings/tokens
 
-Con cualquiera de estas claves, el servicio:
-- Lee tu SRS **real** y genera casos de prueba específicos
-- **Analiza tu captura** y detecta hallazgos reales
+Con ambas claves, el servicio:
+- Lee tu SRS **real** y genera casos de prueba específicos (con Groq)
+- **Analiza tu captura** y detecta hallazgos reales (con Qwen)
 - El PDF refleja problemas reales de tu interfaz
 
 ### 2. Imagen real de tu UI
@@ -214,12 +198,12 @@ Instala `python-jose` y agrega tokens en `auth_controller.py` para APIs protegid
 |------|-----------|---------|
 | **Entrada** | FastAPI (ASGI) | Router, validación Pydantic, CORS |
 | **Controladores** | 3 routers FastAPI | auth, auditoria, exportar |
-| **Servicios** | Python puro | Gemini/Groq/HF API, PyMuPDF, ReportLab |
+| **Servicios** | Python puro | Groq + HF API, PyMuPDF, ReportLab |
 | **Modelos** | SQLite + sqlite3 | Persistencia real de todos los datos |
 | **Vista HTML** | Jinja2-less HTML | Archivo separado, sin lógica |
 | **Estilos** | CSS puro (340 líneas) | Variables CSS, responsive, dark theme |
 | **JavaScript** | Vanilla JS ES2022 | Fetch API, DOM, estado de la app |
-| **IA** | Gemini 2.0 / Groq / HF Qwen | Análisis de SRS + auditoría visual |
+| **IA** | Groq + HF Qwen | Casos SRS + auditoría visual |
 | **Extracción** | PyMuPDF (fitz) | PDF, DOCX, TXT → texto |
 | **PDF** | ReportLab | Reporte profesional 3 páginas |
 | **Auth** | bcrypt | Hash seguro de contraseñas |

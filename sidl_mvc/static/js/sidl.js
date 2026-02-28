@@ -122,7 +122,7 @@ async function iniciarAnalisis() {
     urlImagenActual = URL.createObjectURL(uiFile);
   }
 
-  mostrarLoading('Enviando archivos al servidor Python...\n(Gemini 1.5 Pro generará los casos de prueba)');
+  mostrarLoading('Enviando archivos al servidor Python...\n(Groq generará los casos de prueba)');
 
   const form = new FormData();
   form.append('srs', srsFile);
@@ -143,26 +143,25 @@ async function iniciarAnalisis() {
     goScreen('s-casos');
     pasoAlcanzado = Math.max(pasoAlcanzado, 2);
 
-    const motorIA = data.fuente === 'groq' ? 'Groq' : 'Gemini';
+    const motorIA = data.fuente === 'groq' ? 'Groq' : 'HuggingFace Qwen';
 
     // Mostrar log del proceso en tiempo real
     mostrarLogAnalisis([
       ['hi',   '[FastAPI]  Archivos recibidos y guardados en el servidor.'],
       ['',     '[PyMuPDF]  Extrayendo texto del documento SRS...'],
       ['ok',   `[PyMuPDF]  ✓ ${data.texto_srs_preview?.length || 0} caracteres extraídos.`],
-      ['hi',   `[${motorIA}]   Analizando requisitos... (fuente: ${data.fuente})`],
-      ['ok',   `[${motorIA}]   ✓ ${filasCasos.length} casos de prueba generados.`],
+      ['hi',   `[Groq]     Analizando requisitos... (fuente: ${data.fuente})`],
+      ['ok',   `[Groq]     ✓ ${filasCasos.length} casos de prueba generados.`],
       ['warn', '[Control]  Human-in-the-loop: Revisa y edita antes de continuar.'],
       ['ok',   `[SQLite]   ✓ Sesión ${sessionId.substring(0,8)}... guardada en la base de datos.`],
     ]);
 
     const mapaFuentes = {
-      gemini: 'Gemini 2.0 Flash',
-      groq: 'Groq Llama',
+      groq: 'Groq Llama-3.1-8b',
       huggingface: 'Hugging Face Qwen2.5-VL-7B',
-      fallback: 'Modo Fallback (configura GEMINI_API_KEY, GROQ_API_KEY o HUGGINGFACE_API_KEY)'
+      fallback: 'Modo Fallback (configura GROQ_API_KEY o HUGGINGFACE_API_KEY)'
     };
-    const fuente = mapaFuentes[data.fuente] || 'Modo Fallback (configura GEMINI_API_KEY, GROQ_API_KEY o HUGGINGFACE_API_KEY)';
+    const fuente = mapaFuentes[data.fuente] || 'Modo Fallback (configura GROQ_API_KEY o HUGGINGFACE_API_KEY)';
     document.getElementById('tc-fuente').textContent = `// FUENTE: ${fuente.toUpperCase()} — EDITA ANTES DE AUDITAR`;
     renderizarTablaCasos();
 
@@ -186,7 +185,7 @@ function iniciarDemo() {
   ];
   goScreen('s-casos');
   pasoAlcanzado = Math.max(pasoAlcanzado, 2);
-  document.getElementById('tc-fuente').textContent = '// MODO DEMO — Datos de ejemplo (activa GEMINI_API_KEY para análisis real)';
+  document.getElementById('tc-fuente').textContent = '// MODO DEMO — Datos de ejemplo (activa GROQ_API_KEY y HUGGINGFACE_API_KEY para análisis real)';
   renderizarTablaCasos();
   toast('Modo demo activado — puedes probar el flujo completo ✓');
 }
@@ -334,7 +333,7 @@ async function exportarCSV() {
 async function lanzarAuditoria() {
   if (!filasCasos.length) { toast('Agrega al menos un caso de prueba.'); return; }
 
-  mostrarLoading('Enviando casos de prueba al motor de auditoría...\n(Gemini 1.5 Pro Vision analizará la imagen)');
+  mostrarLoading('Enviando casos de prueba al motor de auditoría...\n(Hugging Face Qwen visión analizará la imagen)');
 
   try {
     const body = {
@@ -700,7 +699,7 @@ function abrirTicket(e, id) {
       <div class="t-val">${escHtml(auditId || 'demo')}</div>
     </div>
     <div class="t-field"><div class="t-label">GENERADO POR</div>
-      <div class="t-val">SiDL MVC v2.0 — FastAPI + SQLite + Gemini 1.5 Pro — ${new Date().toISOString()}</div>
+      <div class="t-val">SiDL MVC v2.0 — FastAPI + SQLite + Groq + Qwen — ${new Date().toISOString()}</div>
     </div>`;
   abrirModal('modal-ticket');
 }

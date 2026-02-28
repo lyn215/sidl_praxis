@@ -44,7 +44,7 @@ def obtener_sesion(session_id: str) -> Optional[dict]:
 def crear_auditoria(
     sesion_id: str, puntaje: int,
     hallazgos: list, casos: list, wcag: list,
-    fuente: str = "gemini",
+    fuente: str = "groq",
     usuario_id: Optional[str] = None
 ) -> str:
     """Guarda la auditoría completa en SQLite. Retorna el audit_id."""
