@@ -143,18 +143,26 @@ async function iniciarAnalisis() {
     goScreen('s-casos');
     pasoAlcanzado = Math.max(pasoAlcanzado, 2);
 
+    const motorIA = data.fuente === 'groq' ? 'Groq' : 'Gemini';
+
     // Mostrar log del proceso en tiempo real
     mostrarLogAnalisis([
       ['hi',   '[FastAPI]  Archivos recibidos y guardados en el servidor.'],
       ['',     '[PyMuPDF]  Extrayendo texto del documento SRS...'],
       ['ok',   `[PyMuPDF]  ✓ ${data.texto_srs_preview?.length || 0} caracteres extraídos.`],
-      ['hi',   `[Gemini]   Analizando requisitos... (fuente: ${data.fuente})`],
-      ['ok',   `[Gemini]   ✓ ${filasCasos.length} casos de prueba generados.`],
+      ['hi',   `[${motorIA}]   Analizando requisitos... (fuente: ${data.fuente})`],
+      ['ok',   `[${motorIA}]   ✓ ${filasCasos.length} casos de prueba generados.`],
       ['warn', '[Control]  Human-in-the-loop: Revisa y edita antes de continuar.'],
       ['ok',   `[SQLite]   ✓ Sesión ${sessionId.substring(0,8)}... guardada en la base de datos.`],
     ]);
 
-    const fuente = data.fuente === 'gemini' ? 'Gemini 1.5 Pro' : 'Modo Fallback (configura GEMINI_API_KEY)';
+    const mapaFuentes = {
+      gemini: 'Gemini 2.0 Flash',
+      groq: 'Groq Llama',
+      huggingface: 'Hugging Face Qwen2.5-VL-7B',
+      fallback: 'Modo Fallback (configura GEMINI_API_KEY, GROQ_API_KEY o HUGGINGFACE_API_KEY)'
+    };
+    const fuente = mapaFuentes[data.fuente] || 'Modo Fallback (configura GEMINI_API_KEY, GROQ_API_KEY o HUGGINGFACE_API_KEY)';
     document.getElementById('tc-fuente').textContent = `// FUENTE: ${fuente.toUpperCase()} — EDITA ANTES DE AUDITAR`;
     renderizarTablaCasos();
 
