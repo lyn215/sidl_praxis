@@ -89,38 +89,52 @@ REGLAS DE EVALUACIÓN:
 1. Si la imagen NO corresponde al sistema o es irrelevante, falla TODOS los casos.
 2. Si el elemento exigido por un caso NO ESTÁ, es un defecto crítico.
 3. Evalúa estrictamente colores, textos y diseño.
+4. Cada caso tiene prioridad critical, high, medium o low. Si un caso falla, asigna la severidad correspondiente al hallazgo.
+
 
 REGLAS DE FORMATO (CRÍTICO):
 1. Responde SOLO con JSON válido. Ni una palabra más.
 2. PROHIBIDO usar comillas dobles dentro de los valores de texto. Si necesitas citar algo, usa comillas simples ('texto').
 3. No uses markdown (```json).
 4. El campo "refCaso" debe ser el ID del caso (ej. CP-001).
+5. El campo "bbox" debe usar porcentajes relativos a la imagen (ej. "x": "10%", "y": "20%", "w": "30%", "h": "15%") para marcar dónde está el hallazgo.
+6. El campo "tecnicas" debe ser una lista de técnicas usadas para detectar el hallazgo (ej. ["Inspección visual", "Comparación de colores"]).
+7. El campo "wcag" debe incluir al menos el contraste (1.4.3) con su estado (pass/fail/warn) y nota.
+
+--------------------------------
+REGLAS CRÍTICAS
+--------------------------------
+
+- NO inventes elementos.
+- NO asumas propiedades no visibles.
+- NO omitas casos.
+- Si no puedes verificar visualmente, marca critical.
+- Basa tu decisión SOLO en la imagen.
+
+El JSON a continuación es un ejemplo de cómo debe ser la respuesta. Sigue exactamente este formato, sin desviarte:
 
 FORMATO JSON A SEGUIR:
 {{
   "hallazgos": [
     {{
-      "id": "H-001",
-      "severidad": "critical",
-      "refCaso": "CP-001",
-      "titulo": "Elemento faltante o distinto",
-      "clausula": "Ref del caso",
-      "desc": "El caso pedia X pero se obtuvo Y",
-      "esperado": "Lo exigido",
-      "obtenido": "Lo de la imagen",
-      "tecnicas": ["Inspeccion"],
-      "bbox": {{"x": "10%", "y": "10%", "w": "80%", "h": "80%", "tipo": "error", "etiqueta": "DEFECTO"}}
+      "id": "(generar un ID único para cada hallazgo, ej. HALL-001)",
+      "severidad": "(critical, high, medium, low)",
+      "refCaso": "(ID del caso de prueba relacionado, ej. CP-001)",
+      "titulo": "(Título breve del hallazgo)",
+      "clausula": "(Referencia a la sección del SRS, ej. §2.3)",
+      "desc": "(Descripción detallada del hallazgo)",
+      "esperado": "(Resultado esperado según el caso)",
+      "obtenido": "(Resultado obtenido de la imagen)",
+      "tecnicas": ["(Técnicas de prueba usadas, ej. 'Inspección visual', 'Comparación de colores')"],
+      "bbox": {{"x": "", "y": "", "w": "", "h": "", "tipo": "error", "etiqueta": "(Texto a mostrar en la etiqueta del bounding box)"}}
     }}
   ],
   "wcag": [
-    {{"id": "1.4.3", "nombre": "Contraste", "nivel": "AA", "estado": "fail", "nota": "Evaluado"}}
+    {{"id": "1.4.3", "nombre": "Contraste", "nivel": "AA", "estado": "", "nota": ""}}
   ],
-  "puntaje": 20,
-  "resumen": "Resumen sin comillas dobles."
+  "puntaje": (puntuaje dadodo el número y severidad de hallazgos, entre 0 y 100, donde 100 es perfecto y 0 es inaceptable),
+  "resumen": "(Resumen detallado de los hallazgos.)"
 }}
-
-Cuando hayas terminado, responde SOLO con el JSON, sin markdown ni explicaciones, ni nada más. 
-Asegúrate de que el JSON sea perfectamente válido, revisa si faltan comas y si hay caracteres que lo puedan hacer inválido al momento de ser procesado.
 """
 
 def _proveedor_activo() -> str:
