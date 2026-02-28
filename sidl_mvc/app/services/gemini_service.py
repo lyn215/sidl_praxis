@@ -80,26 +80,80 @@ Asegúrate de que el JSON sea perfectamente válido, revisa si faltan comas y si
 
 # ─── Prompt para Auditoría Visual real ───────────────────────────────────────
 PROMPT_AUDITORIA = """
-Actúa como un script automatizado de QA. Ejecuta los Casos de Prueba sobre la imagen.
+Eres un sistema automatizado de auditoría QA visual.
 
-CASOS DE PRUEBA:
-{casos_json}
+Tu tarea es verificar una interfaz gráfica de software (UI) válida usando evidencia visual REAL de la imagen.
 
+NO describas la imagen de forma general.
+NO hagas suposiciones.
+SOLO evalúa los casos de prueba dados.
+
+Una interfaz válida contiene elementos como:
+
+- botones
+- campos de texto
+- tablas
+- menús
+- formularios
+- dashboard
+- ventanas de software
+
+NO es válida si es:
+
+- foto real
+- paisaje
+- persona
+- animal
+- objeto físico
+- cualquier ilustración no UI
+
+--------------------------------
+PROCEDIMIENTO OBLIGATORIO
+--------------------------------
+
+Para CADA caso de prueba, sigue EXACTAMENTE estos pasos:
+
+PASO 1 — Localización
+Busca el elemento mencionado en el caso de prueba.
+
+PASO 2 — Verificación de existencia
+Si el elemento NO existe en la imagen, marca critical.
+Si la imagen es irrelevante o no corresponde al sistema, marca critical TODOS los casos y explica que la imagen no es válida para la auditoría.
+
+PASO 3 — Extracción visual
+Si existe, extrae las propiedades visibles reales:
+- texto exacto visible
+- color visible
+- forma o tipo (botón, input, tabla, etc.)
+- posición aproximada
+
+PASO 4 — Comparación estricta
+Compara lo observado con lo esperado.
+
+PASO 5 — Decisión final
+Marca critical, high, medium o low según la severidad del fallo, basándote SOLO en la evidencia visual.
+
+--------------------------------
 REGLAS DE EVALUACIÓN:
-1. Si la imagen NO corresponde al sistema o es irrelevante, falla TODOS los casos.
+--------------------------------
+
+1. Si la imagen NO corresponde al sistema o es irrelevante, falla TODOS los casos. Marca critical y explica que la imagen no es válida para la auditoría.
 2. Si el elemento exigido por un caso NO ESTÁ, es un defecto crítico.
 3. Evalúa estrictamente colores, textos y diseño.
 4. Cada caso tiene prioridad critical, high, medium o low. Si un caso falla, asigna la severidad correspondiente al hallazgo.
 
-
+--------------------------------
 REGLAS DE FORMATO (CRÍTICO):
+--------------------------------
+
 1. Responde SOLO con JSON válido. Ni una palabra más.
 2. PROHIBIDO usar comillas dobles dentro de los valores de texto. Si necesitas citar algo, usa comillas simples ('texto').
 3. No uses markdown (```json).
-4. El campo "refCaso" debe ser el ID del caso (ej. CP-001).
-5. El campo "bbox" debe usar porcentajes relativos a la imagen (ej. "x": "10%", "y": "20%", "w": "30%", "h": "15%") para marcar dónde está el hallazgo.
+4. El campo "refCaso" debe ser el ID del caso ("id") de los Casos de prueba (ej. CP-001).
+5. El campo "bbox" debe usar porcentajes relativos a la imagen (ejemplo. "x": "10%", "y": "20%", "w": "30%", "h": "15%") para marcar dónde está el hallazgo.
 6. El campo "tecnicas" debe ser una lista de técnicas usadas para detectar el hallazgo (ej. ["Inspección visual", "Comparación de colores"]).
 7. El campo "wcag" debe incluir al menos el contraste (1.4.3) con su estado (pass/fail/warn) y nota.
+8. El campo "clausula" debe referenciar la sección "ref" del caso de prueba para facilitar la trazabilidad.
 
 --------------------------------
 REGLAS CRÍTICAS
@@ -111,6 +165,11 @@ REGLAS CRÍTICAS
 - Si no puedes verificar visualmente, marca critical.
 - Basa tu decisión SOLO en la imagen.
 
+--------------------------------
+CASOS DE PRUEBA:
+{casos_json}
+--------------------------------
+
 El JSON a continuación es un ejemplo de cómo debe ser la respuesta. Sigue exactamente este formato, sin desviarte:
 
 FORMATO JSON A SEGUIR:
@@ -119,9 +178,9 @@ FORMATO JSON A SEGUIR:
     {{
       "id": "(generar un ID único para cada hallazgo, ej. HALL-001)",
       "severidad": "(critical, high, medium, low)",
-      "refCaso": "(ID del caso de prueba relacionado, ej. CP-001)",
+      "refCaso": "(ID del caso de prueba relacionado",
       "titulo": "(Título breve del hallazgo)",
-      "clausula": "(Referencia a la sección del SRS, ej. §2.3)",
+      "clausula": "(Referencia a la sección del SRS)",
       "desc": "(Descripción detallada del hallazgo)",
       "esperado": "(Resultado esperado según el caso)",
       "obtenido": "(Resultado obtenido de la imagen)",
@@ -132,7 +191,7 @@ FORMATO JSON A SEGUIR:
   "wcag": [
     {{"id": "1.4.3", "nombre": "Contraste", "nivel": "AA", "estado": "", "nota": ""}}
   ],
-  "puntaje": (puntuaje dadodo el número y severidad de hallazgos, entre 0 y 100, donde 100 es perfecto y 0 es inaceptable),
+  "puntaje": (puntuaje dado el número y severidad de hallazgos, entre 0 y 100, donde 100 es perfecto y 0 es inaceptable),
   "resumen": "(Resumen detallado de los hallazgos.)"
 }}
 """
