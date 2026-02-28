@@ -46,6 +46,9 @@ Responde ÚNICAMENTE con JSON válido, sin markdown:
     }}
   ]
 }}
+
+Cuando hayas terminado, responde SOLO con el JSON, sin markdown ni explicaciones, ni nada más. 
+Asegúrate de que el JSON sea perfectamente válido, revisa si faltan comas y si hay caracteres que lo puedan hacer inválido al momento de ser procesado.
 """
 
 # ─── Prompt para Auditoría Visual real ───────────────────────────────────────
@@ -88,11 +91,95 @@ FORMATO JSON A SEGUIR:
   "puntaje": 20,
   "resumen": "Resumen sin comillas dobles."
 }}
+
+Cuando hayas terminado, responde SOLO con el JSON, sin markdown ni explicaciones, ni nada más. 
+Asegúrate de que el JSON sea perfectamente válido, revisa si faltan comas y si hay caracteres que lo puedan hacer inválido al momento de ser procesado.
 """
 
 def _limpiar_json(texto: str) -> str:
+    """Extrae JSON de un texto que puede contener markdown o caracteres extra."""
     match = re.search(r'\{.*\}|\[.*\]', texto.strip(), re.DOTALL)
     return match.group(0) if match else texto.strip()
+
+def _validar_y_reparar_json(texto_json: str, contexto: str = "JSON genérico") -> dict:
+    """
+    Valida y repara JSON malformado usando una segunda llamada a IA.
+    
+    Args:
+        texto_json: String JSON potencialmente corrupto
+        contexto: Descripción del tipo de JSON para ayudar a la reparación
+    
+    Returns:
+        Diccionario con 'exito' (bool) y 'datos' (dict) o 'error' (str)
+    """
+    # 1. Intentar parsing directo
+    try:
+        datos = json.loads(texto_json)
+        print(f"✅ JSON válido al primer intento: {contexto}")
+        return {"exito": True, "datos": datos}
+    except json.JSONDecodeError as e:
+        print(f"⚠️ JSON inválido en {contexto}: {e}")
+    
+    # 2. Intentar limpiezas automáticas comunes
+    texto_limpio = texto_json.strip()
+    
+    # Remover markdown JSON blocks
+    texto_limpio = re.sub(r'^```json\s*', '', texto_limpio)
+    texto_limpio = re.sub(r'\s*```$', '', texto_limpio)
+    
+    try:
+        datos = json.loads(texto_limpio)
+        print(f"✅ JSON válido después de limpiar markdown: {contexto}")
+        return {"exito": True, "datos": datos}
+    except json.JSONDecodeError:
+        pass
+    
+    # 3. Si no hay API key, retornar error
+    if not GROQ_API_KEY:
+        return {"exito": False, "error": "Sin API key para reparación de JSON"}
+    
+    # 4. Usar IA para reparar el JSON
+    print(f"\n🔧 Enviando JSON malformado a IA para reparación: {contexto}\n")
+    try:
+        prompt = f"""Eres un experto en JSON. Recibiste este JSON corrupto:
+
+{texto_json[:2000]}
+
+INSTRUCCIONES:
+1. Identifica los errores (comillas sin escapar, caracteres especiales, estructura rota, etc.)
+2. Repara el JSON para que sea válido
+3. Responde SOLO con el JSON reparado, sin explicaciones ni markdown
+
+Contexto del JSON: {contexto}
+Valida que el JSON sea perfectamente válido y parseable."""
+
+        headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
+        payload = {
+            "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.1,
+            "max_tokens": 4096
+        }
+        
+        response = requests.post(GROQ_URL, headers=headers, json=payload, timeout=30)
+        response.raise_for_status()
+        
+        contenido = response.json()["choices"][0]["message"]["content"]
+        json_reparado = _limpiar_json(contenido)
+        
+        # Intentar parsear el JSON reparado
+        datos = json.loads(json_reparado)
+        print(f"✅ IA reparó el JSON exitosamente: {contexto}")
+        return {"exito": True, "datos": datos}
+        
+    except json.JSONDecodeError as e:
+        error_msg = f"IA no pudo reparar el JSON: {e}. Contenido original: {texto_json[:500]}"
+        print(f"❌ {error_msg}")
+        return {"exito": False, "error": error_msg}
+    except Exception as e:
+        error_msg = f"Error llamando a IA para reparación: {e}"
+        print(f"❌ {error_msg}")
+        return {"exito": False, "error": error_msg}
 
 def generar_casos_desde_srs(texto_srs: str) -> dict:
     if not GROQ_API_KEY:
@@ -102,7 +189,7 @@ def generar_casos_desde_srs(texto_srs: str) -> dict:
         prompt = PROMPT_CASOS.format(texto_srs=texto_srs[:8000])
         headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
         payload = {
-            "model": "llama-3.1-8b-instant",
+            "model": "meta-llama/llama-4-scout-17b-16e-instruct",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.1,
             "response_format": {"type": "json_object"}
@@ -111,7 +198,14 @@ def generar_casos_desde_srs(texto_srs: str) -> dict:
         response = requests.post(GROQ_URL, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         
-        data = json.loads(_limpiar_json(response.json()["choices"][0]["message"]["content"]))
+        contenido_json = _limpiar_json(response.json()["choices"][0]["message"]["content"])
+        resultado_validacion = _validar_y_reparar_json(contenido_json, "Casos de Prueba SRS")
+        
+        if not resultado_validacion["exito"]:
+            print(f"❌ No se pudo reparar JSON de casos: {resultado_validacion['error']}")
+            return {"casos": _casos_fallback(), "requisitos_extraidos": "Error de JSON", "fuente": "fallback"}
+        
+        data = resultado_validacion["datos"]
         casos = data.get("casos", [])
         requisitos = data.get("requisitos_extraidos", "No se pudieron extraer los requisitos.")
         
@@ -161,7 +255,14 @@ def auditar_con_vision(texto_srs: str, ruta_imagen: Optional[str], casos: list) 
             
         response.raise_for_status()
 
-        data = json.loads(_limpiar_json(response.json()["choices"][0]["message"]["content"]))
+        contenido_json = _limpiar_json(response.json()["choices"][0]["message"]["content"])
+        resultado_validacion = _validar_y_reparar_json(contenido_json, "Auditoría Visual Groq Vision")
+        
+        if not resultado_validacion["exito"]:
+            print(f"❌ No se pudo reparar JSON de auditoría: {resultado_validacion['error']}")
+            return _resultado_fallback(casos)
+        
+        data = resultado_validacion["datos"]
         hallazgos = data.get("hallazgos", [])
         print(f"✅ Groq Vision detectó {len(hallazgos)} hallazgos reales.")
         
