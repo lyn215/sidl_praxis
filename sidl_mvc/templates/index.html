@@ -27,7 +27,7 @@
   <div class="topbar-sep"></div>
   <div class="topbar-status">
     <span class="pulse-dot"></span>
-    FASTAPI + SQLITE + GEMINI 1.5 PRO
+    FASTAPI + SQLITE + GROQ + QWEN
   </div>
   <div id="nb-auth-area" style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;flex-shrink:0">
     <button class="topbar-btn" onclick="abrirAuth()">
@@ -110,7 +110,7 @@
     <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:1.5rem">
       <span class="tech-badge"><i class="bi bi-cpu me-1" style="color:var(--sky)"></i>FastAPI + Python MVC</span>
       <span class="tech-badge"><i class="bi bi-database me-1" style="color:var(--sky)"></i>SQLite</span>
-      <span class="tech-badge"><i class="bi bi-eye me-1" style="color:var(--sky)"></i>Gemini 1.5 Pro Vision</span>
+      <span class="tech-badge"><i class="bi bi-eye me-1" style="color:var(--sky)"></i>Groq + Qwen Vision</span>
       <span class="tech-badge"><i class="bi bi-file-pdf me-1" style="color:var(--sky)"></i>ReportLab PDF</span>
       <span class="tech-badge"><i class="bi bi-file-earmark me-1" style="color:var(--sky)"></i>PyMuPDF</span>
     </div>
@@ -134,7 +134,7 @@
     <div class="section-header">
       <div>
         <div class="section-title">GESTIÓN DE <em>CASOS DE PRUEBA</em></div>
-        <div class="section-sub" id="tc-fuente">// GENERADOS POR GEMINI 1.5 PRO — REVISA Y EDITA ANTES DE AUDITAR</div>
+        <div class="section-sub" id="tc-fuente">// GENERADOS POR GROQ — EDITA Y PREPARA PARA LA AUDITORÍA VISUAL</div>
       </div>
       <div class="btn-group-sm">
         <button class="btn-sm" onclick="agregarFila()"><i class="bi bi-plus-lg"></i> AGREGAR FILA</button>
@@ -169,7 +169,7 @@
     <div class="scan-log-panel" id="log-analisis" style="display:none">
       <div class="log-header">
         <i class="bi bi-terminal" style="color:var(--sky)"></i>
-        BACKEND PYTHON — PROCESANDO SRS CON GEMINI
+        BACKEND PYTHON — PROCESANDO SRS CON GROQ
       </div>
       <div class="log-body" id="log-analisis-body"></div>
     </div>
@@ -184,7 +184,7 @@
     <div class="audit-toolbar">
       <span style="font-family:var(--mono);font-size:.6rem;color:var(--text-3);letter-spacing:1px">
         <i class="bi bi-play-circle me-1" style="color:var(--sky)"></i>
-        AUDITORÍA DUAL — ANÁLISIS GEMINI 1.5 PRO VISION EN TIEMPO REAL
+        AUDITORÍA VISUAL — ANÁLISIS HUGGING FACE QWEN EN TIEMPO REAL
       </span>
       <div style="margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--sky)" id="audit-pct">0%</div>
       <div class="prog-bar-wrap" style="width:180px;margin:0">
@@ -218,7 +218,7 @@
           <div class="scan-log-panel" style="margin-top:1rem">
             <div class="log-header">
               <i class="bi bi-terminal" style="color:var(--sky)"></i>
-              MOTOR DE AUDITORÍA GEMINI — REGISTRO DE ANÁLISIS
+              MOTOR DE AUDITORÍA QWEN — REGISTRO DE ANÁLISIS
             </div>
             <div class="log-body" id="audit-log"></div>
           </div>

@@ -22,7 +22,7 @@ async def subir_archivos(
 ):
     """
     Recibe SRS + captura de pantalla.
-    Extrae texto del SRS con PyMuPDF y genera casos de prueba con Gemini 1.5 Pro.
+    Extrae texto del SRS con PyMuPDF y genera casos de prueba con Groq.
     """
     # ── Guardar archivos en disco ──────────────────────────────────────────────
     sid = str(uuid.uuid4())
@@ -51,7 +51,7 @@ async def subir_archivos(
     # ── Extraer texto del SRS ──────────────────────────────────────────────────
     texto_srs = srs_service.extraer_texto(ruta_srs)
     preview   = texto_srs  # <-- Ahora enviamos todo el documento
-    # ── Generar casos de prueba con Gemini (ahora Groq) ───────────────────────
+    # ── Generar casos de prueba con Groq ───────────────────────────────────────
     resultado = gemini_service.generar_casos_desde_srs(texto_srs)
     casos     = resultado["casos"]
     fuente    = resultado["fuente"]
@@ -80,7 +80,7 @@ async def subir_archivos(
 @router.post("/lanzar", response_model=AuditoriaResponse)
 async def lanzar_auditoria(req: LanzarAuditoriaRequest):
     """
-    Ejecuta la auditoría visual real con Gemini Vision.
+    Ejecuta la auditoría visual real con Hugging Face Qwen Vision.
     Guarda todos los resultados en SQLite (auditorias, hallazgos, casos, wcag).
     """
     casos_dict = [c.dict() for c in req.casos]
@@ -93,7 +93,7 @@ async def lanzar_auditoria(req: LanzarAuditoriaRequest):
         texto_srs = sesion.get("texto_srs", "")
         ruta_ui   = sesion.get("ruta_ui", None)
 
-    # ── Auditoría Visual con Gemini 1.5 Pro ───────────────────────────────────
+    # ── Auditoría Visual con Hugging Face Qwen ────────────────────────────────
     resultado = gemini_service.auditar_con_vision(
         texto_srs=texto_srs,
         ruta_imagen=ruta_ui,
@@ -103,7 +103,7 @@ async def lanzar_auditoria(req: LanzarAuditoriaRequest):
     hallazgos = resultado["hallazgos"]
     wcag      = resultado["wcag"]
     puntaje   = resultado["puntaje"]
-    fuente    = resultado.get("fuente", "gemini")
+    fuente    = resultado.get("fuente", "huggingface")
 
     # ── Guardar en SQLite ─────────────────────────────────────────────────────
     audit_id = auditoria_model.crear_auditoria(

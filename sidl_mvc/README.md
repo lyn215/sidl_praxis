@@ -1,5 +1,5 @@
 # SiDL MVC v2.0 — Smart Interface & Documentation Lens
-### Plataforma de Auditoría QA — Arquitectura MVC | FastAPI + SQLite + Gemini 1.5 Pro
+### Plataforma de Auditoría QA — Arquitectura MVC | FastAPI + SQLite + Groq + Qwen
 
 ---
 
@@ -26,8 +26,8 @@ sidl_mvc/
 │   │   └── exportar_controller.py   ← Rutas /api/exportar/* (pdf, csv)
 │   │
 │   ├── services/                    ← Lógica de negocio (servicios)
-│   │   ├── config_service.py        ← Lee .env, expone GEMINI_API_KEY
-│   │   ├── gemini_service.py        ← Integración real Gemini 1.5 Pro Vision
+│   │   ├── config_service.py        ← Lee .env, expone API keys
+│   │   ├── gemini_service.py        ← Integración Groq + Hugging Face Qwen
 │   │   ├── srs_service.py           ← Extracción de texto PDF/DOCX/TXT
 │   │   └── pdf_service.py           ← Generación de PDF con ReportLab
 │   │
@@ -56,15 +56,23 @@ sidl_mvc/
 pip install -r requirements.txt
 ```
 
-### 2. Configurar la API Key de Gemini (para análisis REAL)
+### 2. Configurar Proveedores IA (para análisis REAL)
+El sistema requiere dos proveedores IA:
+- **Groq**: Para generación de casos de prueba desde SRS (llama-3.1-8b-instant)
+- **Hugging Face**: Para auditoría visual con Qwen (Qwen2.5-VL-7B-Instruct)
+
 ```bash
 # Copiar plantilla
 cp .env.example .env
 
 # Editar .env
-GEMINI_API_KEY=tu_api_key_aqui
+GROQ_API_KEY=tu_api_key_groq_aqui
+HUGGINGFACE_API_KEY=tu_api_key_huggingface_aqui
 ```
-> 🔑 Obtén tu API Key gratis en: https://aistudio.google.com/app/apikey
+
+**Obtener API Keys:**
+- 🔑 **Groq**: https://console.groq.com/keys (gratis, ultrarrápido)
+- 🔑 **Hugging Face**: https://huggingface.co/settings/tokens (gratis con límites)
 
 ### 3. Ejecutar el servidor
 ```bash
@@ -90,7 +98,7 @@ Usuario sube SRS.pdf + captura.png
          │
          ├─ [PyMuPDF] Extrae texto del PDF
          ├─ [SQLite]  Guarda sesión_archivo
-         └─ [Gemini 1.5 Pro] Genera casos de prueba desde el SRS
+         └─ [OpenAI-compatible API] Genera casos de prueba desde el SRS
                 │
                 ▼
          Responde: session_id + casos[]
@@ -100,7 +108,7 @@ Usuario edita casos de prueba en la tabla
                 ▼
 [FastAPI] /api/auditoria/lanzar
          │
-         ├─ [Gemini 1.5 Pro Vision] Analiza imagen + casos + SRS → hallazgos[]
+         ├─ [OpenAI-compatible API] Analiza imagen + casos + SRS → hallazgos[]
          ├─ [SQLite] Guarda auditoria + hallazgos + casos + wcag
          └─ Responde: audit_id + puntaje + hallazgos[] + wcag[]
                 │
@@ -119,8 +127,8 @@ Usuario edita casos de prueba en la tabla
 | `GET`  | `/` | Sirve el frontend HTML |
 | `POST` | `/api/auth/registro` | Registrar usuario (guarda en SQLite con bcrypt) |
 | `POST` | `/api/auth/login` | Autenticar usuario |
-| `POST` | `/api/auditoria/subir` | Subir SRS + imagen, genera casos con Gemini |
-| `POST` | `/api/auditoria/lanzar` | Auditoría visual real con Gemini Vision |
+| `POST` | `/api/auditoria/subir` | Subir SRS + imagen, genera casos con IA |
+| `POST` | `/api/auditoria/lanzar` | Auditoría visual real con IA Vision |
 | `GET`  | `/api/auditoria/historial/{usuario_id}` | Historial desde SQLite |
 | `DELETE` | `/api/auditoria/eliminar/{audit_id}/{usuario_id}` | Eliminar auditoría (CASCADE) |
 | `GET`  | `/api/auditoria/detalle/{audit_id}` | Detalle completo de una auditoría |
@@ -148,14 +156,30 @@ Tablas creadas automáticamente:
 
 ## ✅ Qué cambiar para Producción 100% Real
 
-### 1. GEMINI_API_KEY (Obligatorio)
-Sin esto, la app usa datos de demostración. Con la clave:
-- Gemini lee tu SRS **real** y genera casos de prueba específicos
-- Gemini Vision **analiza tu captura** y detecta hallazgos reales
+### 1. Configurar Proveedores IA (Obligatorio)
+Sin esto, la app usa datos de demostración. Se requieren ambos:
+
+**Groq (Llama 3.1)**
+- Configura `GROQ_API_KEY` en `.env`
+- Usado para: Generación de casos de prueba desde SRS
+- Modelo: `llama-3.1-8b-instant` (ultrarrápido)
+- Gratis y sin límites de tokens
+- 🔗 https://console.groq.com/keys
+
+**Hugging Face (Qwen2.5-VL-7B-Instruct)**
+- Configura `HUGGINGFACE_API_KEY` en `.env`
+- Usado para: Análisis visual y auditoría con IA Vision
+- Modelo: `Qwen/Qwen2.5-VL-7B-Instruct` (multimodal)
+- Modelos open-source, buena privacidad
+- 🔗 https://huggingface.co/settings/tokens
+
+Con ambas claves, el servicio:
+- Lee tu SRS **real** y genera casos de prueba específicos (con Groq)
+- **Analiza tu captura** y detecta hallazgos reales (con Qwen)
 - El PDF refleja problemas reales de tu interfaz
 
 ### 2. Imagen real de tu UI
-Sube una captura de pantalla **real de tu aplicación** para que Gemini Vision la analice.
+Sube una captura de pantalla **real de tu aplicación** para que la IA Vision la analice.
 
 ### 3. SRS real
 Sube tu documento PDF/DOCX/TXT de especificación real para que PyMuPDF extraiga los requisitos.
@@ -174,12 +198,12 @@ Instala `python-jose` y agrega tokens en `auth_controller.py` para APIs protegid
 |------|-----------|---------|
 | **Entrada** | FastAPI (ASGI) | Router, validación Pydantic, CORS |
 | **Controladores** | 3 routers FastAPI | auth, auditoria, exportar |
-| **Servicios** | Python puro | Gemini API, PyMuPDF, ReportLab |
+| **Servicios** | Python puro | Groq + HF API, PyMuPDF, ReportLab |
 | **Modelos** | SQLite + sqlite3 | Persistencia real de todos los datos |
 | **Vista HTML** | Jinja2-less HTML | Archivo separado, sin lógica |
 | **Estilos** | CSS puro (340 líneas) | Variables CSS, responsive, dark theme |
 | **JavaScript** | Vanilla JS ES2022 | Fetch API, DOM, estado de la app |
-| **IA** | Gemini 1.5 Pro Vision | Análisis de SRS + auditoría visual |
+| **IA** | Groq + HF Qwen | Casos SRS + auditoría visual |
 | **Extracción** | PyMuPDF (fitz) | PDF, DOCX, TXT → texto |
 | **PDF** | ReportLab | Reporte profesional 3 páginas |
 | **Auth** | bcrypt | Hash seguro de contraseñas |

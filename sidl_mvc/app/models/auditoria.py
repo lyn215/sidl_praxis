@@ -44,7 +44,7 @@ def obtener_sesion(session_id: str) -> Optional[dict]:
 def crear_auditoria(
     sesion_id: str, puntaje: int,
     hallazgos: list, casos: list, wcag: list,
-    fuente: str = "gemini",
+    fuente: str = "groq",
     usuario_id: Optional[str] = None
 ) -> str:
     """Guarda la auditoría completa en SQLite. Retorna el audit_id."""
@@ -66,17 +66,48 @@ def crear_auditoria(
 
     # Casos de prueba
     for c in casos:
+        # Normalizar valores que podrían venir como listas
+        nombre = c.get("nombre","")
+        if isinstance(nombre, list):
+            nombre = " ".join(str(item) for item in nombre)
+        
+        pasos = c.get("pasos","")
+        if isinstance(pasos, list):
+            pasos = " ".join(str(item) for item in pasos)
+        
+        esperado = c.get("esperado","")
+        if isinstance(esperado, list):
+            esperado = " ".join(str(item) for item in esperado)
+        
         conn.execute("""
             INSERT OR REPLACE INTO casos_prueba
             (id, auditoria_id, prioridad, nombre, precondiciones, pasos, esperado, ref_srs)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (c.get("id",""), aid, c.get("prioridad","medium"),
-              c.get("nombre",""), c.get("pre",""), c.get("pasos",""),
-              c.get("esperado",""), c.get("ref","")))
+              nombre, c.get("pre",""), pasos, esperado, c.get("ref","")))
 
     # Hallazgos
     for h in hallazgos:
         bbox = h.get("bbox", {})
+        # Normalizar valores que podrían venir como listas en lugar de strings
+        desc = h.get("desc", "")
+        if isinstance(desc, list):
+            desc = " ".join(str(item) for item in desc)
+        
+        esperado = h.get("esperado", "")
+        if isinstance(esperado, list):
+            esperado = " ".join(str(item) for item in esperado)
+        
+        obtenido = h.get("obtenido", "")
+        if isinstance(obtenido, list):
+            obtenido = " ".join(str(item) for item in obtenido)
+        
+        tecnicas = h.get("tecnicas", [])
+        if isinstance(tecnicas, list):
+            tecnicas = json.dumps(tecnicas, ensure_ascii=False)
+        else:
+            tecnicas = json.dumps([tecnicas], ensure_ascii=False)
+        
         conn.execute("""
             INSERT OR REPLACE INTO hallazgos
             (id, auditoria_id, severidad, ref_caso, titulo, clausula, descripcion,
@@ -84,19 +115,27 @@ def crear_auditoria(
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (h.get("id",""), aid, h.get("severidad","medium"),
               h.get("refCaso",""), h.get("titulo",""), h.get("clausula",""),
-              h.get("desc",""), h.get("esperado",""), h.get("obtenido",""),
-              json.dumps(h.get("tecnicas", []), ensure_ascii=False),
+              desc, esperado, obtenido, tecnicas,
               bbox.get("x",""), bbox.get("y",""), bbox.get("w",""), bbox.get("h",""),
               bbox.get("tipo",""), bbox.get("etiqueta","")))
 
     # Resultados WCAG
     for w in wcag:
+        # Normalizar valores que podrían venir como listas
+        nombre = w.get("nombre", "")
+        if isinstance(nombre, list):
+            nombre = " ".join(str(item) for item in nombre)
+        
+        nota = w.get("nota", "")
+        if isinstance(nota, list):
+            nota = " ".join(str(item) for item in nota)
+        
         conn.execute("""
             INSERT INTO resultados_wcag
             (auditoria_id, criterio_id, nombre, nivel, estado, nota)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (aid, w.get("id",""), w.get("nombre",""), w.get("nivel",""),
-              w.get("estado",""), w.get("nota","")))
+        """, (aid, w.get("id",""), nombre, w.get("nivel",""),
+              w.get("estado",""), nota))
 
     conn.commit()
     conn.close()

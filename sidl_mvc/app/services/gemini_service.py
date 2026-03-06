@@ -1,6 +1,6 @@
 """
-SERVICE — Cloud AI Service (Groq)
-Integración gratuita ultrarrápida utilizando modelos Llama 3 alojados en Groq.
+SERVICE — Cloud AI Service (Qwen/Groq)
+Integración con Groq (QA casos de prueba) y Hugging Face Qwen (auditoría visual).
 """
 
 import json
@@ -16,8 +16,24 @@ from PIL import Image
 
 # Cargar variables de entorno
 load_dotenv()
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# ─── Variables de entorno de proveedores IA ───────────────────────────────────
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "").strip()
+
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL_TEXT = os.getenv("GROQ_MODEL_TEXT", "meta-llama/llama-4-scout-17b-16e-instruct")
+GROQ_MODEL_VISION = os.getenv("GROQ_MODEL_VISION", GROQ_MODEL_TEXT)
+
+HUGGINGFACE_MODEL_TEXT = os.getenv("HUGGINGFACE_MODEL_TEXT", "Qwen/Qwen3.5-35B-A3B:novita")
+HUGGINGFACE_MODEL_VISION = os.getenv("HUGGINGFACE_MODEL_VISION", "Qwen/Qwen3.5-35B-A3B:novita")
+HUGGINGFACE_URL = "https://router.huggingface.co/v1/chat/completions"
+
+# ─── Routing fijo por tarea (para reducir sobrecarga en Qwen) ─────────────────
+CASOS_PROVIDER = "groq"
+CASOS_MODEL = "llama-3.1-8b-instant"
+AUDITORIA_PROVIDER = "huggingface"
+AUDITORIA_MODEL = "Qwen/Qwen3.5-35B-A3B:novita"
 
 # ─── Prompt para generar Casos de Prueba desde SRS ───────────────────────────
 PROMPT_CASOS = """
@@ -46,53 +62,299 @@ Responde ÚNICAMENTE con JSON válido, sin markdown:
     }}
   ]
 }}
+
+Cuando hayas terminado, responde SOLO con el JSON, sin markdown ni explicaciones, ni nada más. 
+Asegúrate de que el JSON sea perfectamente válido, revisa si faltan comas y si hay caracteres que lo puedan hacer inválido al momento de ser procesado.
 """
 
 # ─── Prompt para Auditoría Visual real ───────────────────────────────────────
 PROMPT_AUDITORIA = """
-Actúa como un script automatizado de QA. Ejecuta los Casos de Prueba sobre la imagen.
+Eres un sistema automatizado de auditoría QA visual.
 
-CASOS DE PRUEBA:
-{casos_json}
+Tu tarea es verificar una interfaz gráfica de software (UI) válida usando evidencia visual REAL de la imagen.
 
+NO describas la imagen de forma general.
+NO hagas suposiciones.
+SOLO evalúa los casos de prueba dados.
+
+Una interfaz válida contiene elementos como:
+
+- botones
+- campos de texto
+- tablas
+- menús
+- formularios
+- dashboard
+- ventanas de software
+
+NO es válida si es:
+
+- foto real
+- paisaje
+- persona
+- animal
+- objeto físico
+- cualquier ilustración no UI
+
+--------------------------------
+PROCEDIMIENTO OBLIGATORIO
+--------------------------------
+
+Para CADA caso de prueba, sigue EXACTAMENTE estos pasos:
+
+PASO 1 — Localización
+Busca el elemento mencionado en el caso de prueba.
+
+PASO 2 — Verificación de existencia
+Si el elemento NO existe en la imagen, marca critical.
+Si la imagen es irrelevante o no corresponde al sistema, marca critical TODOS los casos y explica que la imagen no es válida para la auditoría.
+
+PASO 3 — Extracción visual
+Si existe, extrae las propiedades visibles reales:
+- texto exacto visible
+- color visible
+- forma o tipo (botón, input, tabla, etc.)
+- posición aproximada
+
+PASO 4 — Comparación estricta
+Compara lo observado con lo esperado.
+
+PASO 5 — Decisión final
+Marca critical, high, medium o low según la severidad del fallo, basándote SOLO en la evidencia visual.
+
+--------------------------------
 REGLAS DE EVALUACIÓN:
-1. Si la imagen NO corresponde al sistema o es irrelevante, falla TODOS los casos.
+--------------------------------
+
+1. Si la imagen NO corresponde al sistema o es irrelevante, falla TODOS los casos. Marca critical y explica que la imagen no es válida para la auditoría.
 2. Si el elemento exigido por un caso NO ESTÁ, es un defecto crítico.
 3. Evalúa estrictamente colores, textos y diseño.
+4. Cada caso tiene prioridad critical, high, medium o low. Si un caso falla, asigna la severidad correspondiente al hallazgo.
 
+--------------------------------
 REGLAS DE FORMATO (CRÍTICO):
+--------------------------------
+
 1. Responde SOLO con JSON válido. Ni una palabra más.
 2. PROHIBIDO usar comillas dobles dentro de los valores de texto. Si necesitas citar algo, usa comillas simples ('texto').
 3. No uses markdown (```json).
-4. El campo "refCaso" debe ser el ID del caso (ej. CP-001).
+4. El campo "refCaso" debe ser el ID del caso ("id") de los Casos de prueba (ej. CP-001).
+5. El campo "bbox" debe usar porcentajes relativos a la imagen (ejemplo. "x": "10%", "y": "20%", "w": "30%", "h": "15%") para marcar dónde está el hallazgo.
+6. El campo "tecnicas" debe ser una lista de técnicas usadas para detectar el hallazgo (ej. ["Inspección visual", "Comparación de colores"]).
+7. El campo "wcag" debe incluir la id del lineamiento con su estado (pass/fail/warn) y nota. Se deben incluir al menos 4 criterios WCAG relacionados con los hallazgos encontrados.
+8. El campo "clausula" debe referenciar la sección "ref" del caso de prueba para facilitar la trazabilidad.
+
+--------------------------------
+REGLAS CRÍTICAS
+--------------------------------
+
+- NO inventes elementos.
+- NO asumas propiedades no visibles.
+- NO omitas casos.
+- Si no puedes verificar visualmente, marca critical.
+- Basa tu decisión SOLO en la imagen.
+
+--------------------------------
+CASOS DE PRUEBA:
+{casos_json}
+--------------------------------
+
+El JSON a continuación es un ejemplo de cómo debe ser la respuesta. Sigue exactamente este formato, sin desviarte:
 
 FORMATO JSON A SEGUIR:
 {{
   "hallazgos": [
     {{
-      "id": "H-001",
-      "severidad": "critical",
-      "refCaso": "CP-001",
-      "titulo": "Elemento faltante o distinto",
-      "clausula": "Ref del caso",
-      "desc": "El caso pedia X pero se obtuvo Y",
-      "esperado": "Lo exigido",
-      "obtenido": "Lo de la imagen",
-      "tecnicas": ["Inspeccion"],
-      "bbox": {{"x": "10%", "y": "10%", "w": "80%", "h": "80%", "tipo": "error", "etiqueta": "DEFECTO"}}
+      "id": "(generar un ID único para cada hallazgo, ej. HALL-001)",
+      "severidad": "(critical, high, medium, low)",
+      "refCaso": "(ID del caso de prueba relacionado",
+      "titulo": "(Título breve del hallazgo)",
+      "clausula": "(Referencia a la sección del SRS)",
+      "desc": "(Descripción detallada del hallazgo)",
+      "esperado": "(Resultado esperado según el caso)",
+      "obtenido": "(Resultado obtenido de la imagen)",
+      "tecnicas": ["(Técnicas de prueba usadas, ej. 'Inspección visual', 'Comparación de colores')"],
+      "bbox": {{"x": "", "y": "", "w": "", "h": "", "tipo": "error", "etiqueta": "(Texto a mostrar en la etiqueta del bounding box)"}}
     }}
   ],
   "wcag": [
-    {{"id": "1.4.3", "nombre": "Contraste", "nivel": "AA", "estado": "fail", "nota": "Evaluado"}}
+    {{"id": "(id del lineamiento)", "nombre": "(nombre del lineamiento)", "nivel": "(nivel del lineamiento)", "estado": "(pass/fail/warn)", "nota": "(nota relevante sobre el lineamiento)"}}
   ],
-  "puntaje": 20,
-  "resumen": "Resumen sin comillas dobles."
+  "puntaje": (puntuaje dado el número y severidad de hallazgos, entre 0 y 100, donde 100 es perfecto y 0 es inaceptable),
+  "resumen": "(Resumen detallado de los hallazgos.)"
 }}
 """
 
+def _proveedor_activo() -> str:
+    if GROQ_API_KEY:
+        return "groq"
+    if HUGGINGFACE_API_KEY:
+        return "huggingface"
+    return "none"
+
+def _hay_proveedor_configurado() -> bool:
+    return _proveedor_activo() in {"groq", "huggingface"}
+
+def _fuente_activa() -> str:
+    provider = _proveedor_activo()
+    if provider == "groq":
+        return "groq"
+    if provider == "huggingface":
+        return "huggingface"
+    return "fallback"
+
+def _extraer_texto_respuesta(provider: str, body: dict) -> str:
+    # Groq y HuggingFace usan formato OpenAI-compatible
+    return body["choices"][0]["message"]["content"]
+
+def _llamar_modelo(
+    prompt: str,
+    contexto: str,
+    imagen_b64: Optional[str] = None,
+    timeout: int = 30,
+    provider_override: Optional[str] = None,
+    model_override: Optional[str] = None,
+) -> str:
+    provider = provider_override or _proveedor_activo()
+    if provider == "none":
+        raise ValueError("No hay proveedor IA configurado. Define GROQ_API_KEY o HUGGINGFACE_API_KEY")
+
+    es_vision = bool(imagen_b64)
+
+    if provider == "groq":
+        headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
+        model = model_override or (GROQ_MODEL_VISION if es_vision else GROQ_MODEL_TEXT)
+
+        if es_vision:
+            payload = {
+                "model": model,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{imagen_b64}"}}
+                    ]
+                }],
+                "max_tokens": 2048
+            }
+        else:
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+                "response_format": {"type": "json_object"}
+            }
+
+        response = requests.post(GROQ_URL, headers=headers, json=payload, timeout=timeout)
+        if not response.ok:
+            print(f"\n❌ GROQ RECHAZÓ LA PETICIÓN ({contexto}): {response.text}\n")
+        response.raise_for_status()
+        return _extraer_texto_respuesta("groq", response.json())
+
+    if provider == "huggingface":
+        headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}", "Content-Type": "application/json"}
+        model = model_override or (HUGGINGFACE_MODEL_VISION if es_vision else HUGGINGFACE_MODEL_TEXT)
+        hf_url = f"{HUGGINGFACE_URL}"
+
+        if es_vision:
+            payload = {
+                "model": model,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{imagen_b64}"}}
+                    ]
+                }],
+                "max_tokens": 2048
+            }
+        else:
+            payload = {
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+                "max_tokens": 4096
+            }
+
+        response = requests.post(hf_url, headers=headers, json=payload, timeout=timeout)
+        if not response.ok:
+            print(f"\n❌ HUGGINGFACE RECHAZÓ LA PETICIÓN ({contexto}): {response.text}\n")
+        response.raise_for_status()
+        return _extraer_texto_respuesta("huggingface", response.json())
+
 def _limpiar_json(texto: str) -> str:
+    """Extrae JSON de un texto que puede contener markdown o caracteres extra."""
     match = re.search(r'\{.*\}|\[.*\]', texto.strip(), re.DOTALL)
     return match.group(0) if match else texto.strip()
+
+def _validar_y_reparar_json(texto_json: str, contexto: str = "JSON genérico") -> dict:
+    """
+    Valida y repara JSON malformado usando una segunda llamada a IA.
+    
+    Args:
+        texto_json: String JSON potencialmente corrupto
+        contexto: Descripción del tipo de JSON para ayudar a la reparación
+    
+    Returns:
+        Diccionario con 'exito' (bool) y 'datos' (dict) o 'error' (str)
+    """
+    # 1. Intentar parsing directo
+    try:
+        datos = json.loads(texto_json)
+        print(f"✅ JSON válido al primer intento: {contexto}")
+        return {"exito": True, "datos": datos}
+    except json.JSONDecodeError as e:
+        print(f"⚠️ JSON inválido en {contexto}: {e}")
+    
+    # 2. Intentar limpiezas automáticas comunes
+    texto_limpio = texto_json.strip()
+    
+    # Remover markdown JSON blocks
+    texto_limpio = re.sub(r'^```json\s*', '', texto_limpio)
+    texto_limpio = re.sub(r'\s*```$', '', texto_limpio)
+    
+    try:
+        datos = json.loads(texto_limpio)
+        print(f"✅ JSON válido después de limpiar markdown: {contexto}")
+        return {"exito": True, "datos": datos}
+    except json.JSONDecodeError:
+        pass
+    
+    # 3. Si no hay proveedor IA, retornar error
+    if not _hay_proveedor_configurado():
+        return {"exito": False, "error": "Sin proveedor IA para reparación de JSON"}
+    
+    # 4. Usar IA para reparar el JSON
+    print(f"\n🔧 Enviando JSON malformado a IA para reparación: {contexto}\n")
+    try:
+        prompt = f"""Eres un experto en JSON. Recibiste este JSON corrupto:
+
+{texto_json[:2000]}
+
+INSTRUCCIONES:
+1. Identifica los errores (comillas sin escapar, caracteres especiales, estructura rota, etc.)
+2. Repara el JSON para que sea válido
+3. Responde SOLO con el JSON reparado, sin explicaciones ni markdown
+
+Contexto del JSON: {contexto}
+Valida que el JSON sea perfectamente válido y parseable."""
+
+        contenido = _llamar_modelo(prompt=prompt, contexto=f"Reparación JSON - {contexto}", timeout=30)
+        json_reparado = _limpiar_json(contenido)
+        
+        # Intentar parsear el JSON reparado
+        datos = json.loads(json_reparado)
+        print(f"✅ IA reparó el JSON exitosamente: {contexto}")
+        return {"exito": True, "datos": datos}
+        
+    except json.JSONDecodeError as e:
+        error_msg = f"IA no pudo reparar el JSON: {e}. Contenido original: {texto_json[:500]}"
+        print(f"❌ {error_msg}")
+        return {"exito": False, "error": error_msg}
+    except Exception as e:
+        error_msg = f"Error llamando a IA para reparación: {e}"
+        print(f"❌ {error_msg}")
+        return {"exito": False, "error": error_msg}
 
 def generar_casos_desde_srs(texto_srs: str) -> dict:
     if not GROQ_API_KEY:
@@ -100,30 +362,33 @@ def generar_casos_desde_srs(texto_srs: str) -> dict:
 
     try:
         prompt = PROMPT_CASOS.format(texto_srs=texto_srs[:8000])
-        headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
-        payload = {
-            "model": "llama-3.1-8b-instant",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.1,
-            "response_format": {"type": "json_object"}
-        }
+        contenido = _llamar_modelo(
+            prompt=prompt,
+            contexto="Generación de casos SRS",
+            timeout=30,
+            provider_override=CASOS_PROVIDER,
+            model_override=CASOS_MODEL,
+        )
+        contenido_json = _limpiar_json(contenido)
+        resultado_validacion = _validar_y_reparar_json(contenido_json, "Casos de Prueba SRS")
         
-        response = requests.post(GROQ_URL, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
+        if not resultado_validacion["exito"]:
+            print(f"❌ No se pudo reparar JSON de casos: {resultado_validacion['error']}")
+            return {"casos": _casos_fallback(), "requisitos_extraidos": "Error de JSON", "fuente": "fallback"}
         
-        data = json.loads(_limpiar_json(response.json()["choices"][0]["message"]["content"]))
+        data = resultado_validacion["datos"]
         casos = data.get("casos", [])
         requisitos = data.get("requisitos_extraidos", "No se pudieron extraer los requisitos.")
         
-        print(f"✅ Groq generó {len(casos)} casos y extrajo los requisitos limpios.")
-        return {"casos": casos, "requisitos_extraidos": requisitos, "fuente": "groq-llama3.1"}
+        print(f"✅ Groq ({CASOS_MODEL}) generó {len(casos)} casos y extrajo los requisitos limpios.")
+        return {"casos": casos, "requisitos_extraidos": requisitos, "fuente": "groq"}
         
     except Exception as e:
-        print(f"⚠️ Error Groq (casos): {e}")
+        print(f"⚠️ Error IA (casos): {e}")
         return {"casos": _casos_fallback(), "requisitos_extraidos": "Error de conexión.", "fuente": "fallback"}
 
 def auditar_con_vision(texto_srs: str, ruta_imagen: Optional[str], casos: list) -> dict:
-    if not GROQ_API_KEY or not ruta_imagen or not Path(ruta_imagen).exists():
+    if not HUGGINGFACE_API_KEY or not ruta_imagen or not Path(ruta_imagen).exists():
         return _resultado_fallback(casos)
 
     try:
@@ -139,41 +404,34 @@ def auditar_con_vision(texto_srs: str, ruta_imagen: Optional[str], casos: list) 
         casos_json = json.dumps(casos[:6], ensure_ascii=False)
         prompt = PROMPT_AUDITORIA.format(casos_json=casos_json)
 
-        headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
-        payload = {
-            "model": "meta-llama/llama-4-scout-17b-16e-instruct",
-            "messages": [{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}
-                ]
-            }],
-            # Quitamos la temperatura que a veces causa bug en Groq Vision y agregamos max_tokens
-            "max_tokens": 1024 
-        }
-
-        response = requests.post(GROQ_URL, headers=headers, json=payload, timeout=40)
+        contenido = _llamar_modelo(
+            prompt=prompt,
+            contexto="Auditoría visual",
+            imagen_b64=img_b64,
+            timeout=40,
+            provider_override=AUDITORIA_PROVIDER,
+            model_override=AUDITORIA_MODEL,
+        )
+        contenido_json = _limpiar_json(contenido)
+        resultado_validacion = _validar_y_reparar_json(contenido_json, "Auditoría Visual IA")
         
-        # SI FALLA, QUE NOS IMPRIMA EL MOTIVO EXACTO EN LA TERMINAL
-        if not response.ok:
-            print(f"\n❌ GROQ RECHAZÓ LA PETICIÓN: {response.text}\n")
-            
-        response.raise_for_status()
-
-        data = json.loads(_limpiar_json(response.json()["choices"][0]["message"]["content"]))
+        if not resultado_validacion["exito"]:
+            print(f"❌ No se pudo reparar JSON de auditoría: {resultado_validacion['error']}")
+            return _resultado_fallback(casos)
+        
+        data = resultado_validacion["datos"]
         hallazgos = data.get("hallazgos", [])
-        print(f"✅ Groq Vision detectó {len(hallazgos)} hallazgos reales.")
+        print(f"✅ HuggingFace ({AUDITORIA_MODEL}) detectó {len(hallazgos)} hallazgos reales.")
         
         return {
             "hallazgos": hallazgos, 
             "wcag": data.get("wcag", _wcag_default()), 
             "puntaje": data.get("puntaje", _calcular_puntaje(hallazgos)), 
-            "fuente": "groq-vision"
+            "fuente": "huggingface"
         }
 
     except Exception as e:
-        print(f"⚠️ ERROR FATAL Groq Vision: {e}")
+        print(f"⚠️ ERROR FATAL IA Vision: {e}")
         return _resultado_fallback(casos)
 
 def _calcular_puntaje(hallazgos: list) -> int:
@@ -193,7 +451,7 @@ def _resultado_fallback(casos: list) -> dict:
             "id": "ERR-SISTEMA",
             "severidad": "critical",
             "refCaso": casos[0]["id"] if casos else "CP-001",
-            "titulo": "Fallo en el Motor de Visión Groq",
+            "titulo": "Fallo en el Motor de Visión IA",
             "clausula": "Error interno",
             "desc": "El modelo de IA devolvió un JSON corrupto, falló por tiempo de espera o rechazó la imagen.",
             "esperado": "Análisis visual completado con JSON válido",
