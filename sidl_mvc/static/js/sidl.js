@@ -505,7 +505,7 @@ function ejecutarSecuenciaVisor(puntaje) {
         el.classList.add('show');
       }
       document.getElementById('highlight-count').textContent =
-        (i + 1) + ' cláusula' + ((i + 1) !== 1 ? 's violadas' : ' violada');
+        (i + 1) + ' cláusula' + ((i + 1) !== 1 ? 's analizadas' : ' analizada');
       document.getElementById('bbox-count').textContent =
         (i + 1) + ' anomalía' + ((i + 1) !== 1 ? 's detectadas' : ' detectada');
     }, 2500 + i * 500);
