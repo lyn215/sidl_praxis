@@ -16,20 +16,31 @@ if _env_path.exists():
             os.environ.setdefault(key.strip(), val.strip())
 
 # ─── Variables de entorno ─────────────────────────────────────────────────────
-GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-HOST:           str = os.getenv("HOST", "0.0.0.0")
-PORT:           int = int(os.getenv("PORT", "8000"))
-UPLOADS_DIR:    Path = Path("uploads")
-REPORTS_DIR:    Path = Path("reports")
+GROQ_API_KEY:       str = os.getenv("GROQ_API_KEY", "")
+HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", "")
+HOST:               str = os.getenv("HOST", "0.0.0.0")
+PORT:               int = int(os.getenv("PORT", "8000"))
+UPLOADS_DIR:        Path = Path("uploads")
+REPORTS_DIR:        Path = Path("reports")
 
 # Crear directorios necesarios
 for d in [UPLOADS_DIR, REPORTS_DIR]:
     d.mkdir(exist_ok=True)
 
-GEMINI_ACTIVO = bool(GEMINI_API_KEY)
+# Verificar configuración de proveedores IA
+GROQ_ACTIVO = bool(GROQ_API_KEY)
+HUGGINGFACE_ACTIVO = bool(HUGGINGFACE_API_KEY)
 
-if GEMINI_ACTIVO:
-    print(f"✅  GEMINI_API_KEY detectada — análisis real activado.")
+if GROQ_ACTIVO and HUGGINGFACE_ACTIVO:
+    print("✅  GROQ_API_KEY y HUGGINGFACE_API_KEY detectadas — análisis real activado.")
+elif GROQ_ACTIVO or HUGGINGFACE_ACTIVO:
+    print("⚠️  Solo una API IA está configurada. Se necesitan AMBAS para funcionalidad completa.")
+    if not GROQ_ACTIVO:
+        print("    Falta: GROQ_API_KEY en .env")
+    if not HUGGINGFACE_ACTIVO:
+        print("    Falta: HUGGINGFACE_API_KEY en .env")
 else:
-    print("⚠️  GEMINI_API_KEY no configurada — se usarán datos de demostración.")
-    print("    Para activar el análisis real: agrega GEMINI_API_KEY=tu_key en el archivo .env")
+    print("⚠️  Ningún proveedor IA configurado — se usarán datos de demostración.")
+    print("    Para activar el análisis real: agrega en .env:")
+    print("      GROQ_API_KEY=tu_key_groq")
+    print("      HUGGINGFACE_API_KEY=tu_key_huggingface")

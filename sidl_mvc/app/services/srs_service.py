@@ -17,7 +17,7 @@ def extraer_texto(ruta: Path) -> str:
     """
     Extrae texto del documento SRS.
     Soporta: PDF, TXT, y texto plano.
-    Retorna cadena de texto (máx. 8000 caracteres para no exceder tokens de Gemini).
+    Retorna cadena de texto (máx. 8000 caracteres para no exceder tokens de IA).
     """
     ruta = Path(ruta)
     if not ruta.exists():
